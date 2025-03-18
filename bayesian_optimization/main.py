@@ -1,0 +1,168 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+This file initializes the `bayesian_optimization` module.
+"""
+
+import argparse
+import logging
+import pickle
+from pathlib import Path
+
+import pandas as pd
+from skopt import Optimizer
+import bayesian_optimization as bo
+
+def main(configuration_file: str, current_iteration: int) -> None:
+    """
+    This is the main function for the Bayesian optimization module.
+
+    Parameters:
+    configuration_file (str): Path to the configuration file.
+    current_iteration (int): Current iteration number.
+
+    Returns:
+    None
+    """
+
+    # Load the configuration file
+    my_config = bo.read_config_file(configuration_file)
+
+    if current_iteration == 0:
+
+        if my_config.initialization_type == "simulation":
+
+            logging.info("Initialize with a simulation")
+            n_initial_points = 1
+            initial_point_generator = "random"
+
+        else:
+
+            logging.info("Initialize with %s", my_config.initialization_type)
+            n_initial_points = my_config.n_initialization
+            initial_point_generator = my_config.initialization_type
+
+        parameter_bounds = list(my_config.parameter_bounds.values())
+        print(parameter_bounds)
+        my_optimizer = Optimizer(parameter_bounds,
+                        base_estimator=my_config.surrogate_type,
+                        acq_func=my_config.acquisition_type,
+                        acq_optimizer=my_config.acquisitition_optimizer,
+                        n_jobs=my_config.job_number,
+                        n_initial_points=n_initial_points,
+                        initial_point_generator=initial_point_generator)
+
+        initial_df = pd.DataFrame()
+
+        if my_config.initialization_type == "simulation":
+
+            simulation_dictionary = bo.access_file(model_output_files = my_config.output_files_bern3d,
+                                             simulation_name = my_config.simulation_name_bern3d,
+                                             output_type = my_config.output_type_bern3d,
+                                             output_timescale = my_config.output_timescale_bern3d)
+
+            parameter_list = list(my_config.parameter_bounds.keys())
+            initial_df, my_optimizer = bo.compute_and_tell_optimizer(optimizer = my_optimizer,
+                                                                     isotope = my_config.isotope,
+                                                                     parameter_list = parameter_list,
+                                                                     simulation_dict = simulation_dictionary,
+                                                                     validation_data_path = my_config.validation_data_path)
+
+        initial_df.to_csv(f"{my_config.output_dir_optimizer}/{my_config.isotope}_df.csv")
+
+    else:
+        logging.info("Loading the optimizer from the previous iteration")
+        with open(f"{my_config.output_dir_optimizer}/optimizer.pkl", 'rb') as f:
+            my_optimizer = pickle.load(f)
+
+    #######################################
+    ### Ask for next parameters to test ###
+    #######################################
+    next_parameters = my_optimizer.ask(n_points=my_config.batchsize)
+    # Save the optimizer
+    with open(f"{my_config.output_dir_optimizer}/optimizer.pkl", 'wb') as f:
+        pickle.dump(my_optimizer, f)
+
+    if my_config.batchsize == 1:
+        next_parameters = [next_parameters]
+
+    my_simulation_ids = []
+    my_simulation_names = []
+    for batch_number, next_parameter in enumerate(next_parameters):
+
+        # Create new simulation files with runname equal to my_simulation_name
+        my_simulation_name = f"{my_config.simulation_name_bern3d}_{str(batch_number).zfill(2)}_{str(current_iteration).zfill(3)}"
+        new_simulation_path = bo.create_new_simulation(new_name = my_simulation_name,
+                                                       old_name = my_config.template_name_bern3d,
+                                                       work_directory = my_config.work_directory,
+                                                       template_path = my_config.bern3d_template,
+                                                       bern3d_f90=my_config.bern3d_f90,
+                                                       initialization_file=my_config.initialization_file,
+                                                       initialization_destination=my_config.output_files_bern3d)
+
+        # update parameter file
+        new_parameter_file_path = new_simulation_path/my_config.parameter_file.format(simulation_name_bern3d=my_simulation_name)
+        bo.update_parameter_file(next_parameter,
+                                 new_parameter_file_path,
+                                 my_config.parameter_mapping,
+                                 bern3d_f90=my_config.bern3d_f90)
+
+        # run the new simulation
+        model_job_id = bo.submit_job(script_template=my_config.bern3d_script,
+                                        executable_name=my_simulation_name,
+                                        executable_path=new_simulation_path,
+                                        time=my_config.bern3d_script_time)
+
+        my_simulation_ids.append(model_job_id)
+        my_simulation_names.append(my_simulation_name)
+
+    # Create and run dependent sbatch simulation for post-processing
+    post_processing_path = Path(my_config.postprocessing_script).parent
+    post_processing_executable = Path(my_config.postprocessing_script).name
+
+    # command line arguments for the postprocessing script
+    simulation_names = ",".join(my_simulation_names)
+    command_line_arg = [my_config.config_file_path, simulation_names]
+
+    postprocessing_job_id = bo.submit_job(script_template=my_config.postprocessing_script,
+                                        executable_name=post_processing_executable,
+                                        executable_path=post_processing_path,
+                                        time=my_config.postprocessing_script_time,
+                                        dependency=my_simulation_ids,
+                                        command_line_arg=command_line_arg)
+
+    # call optimizer script for the next iteration
+    current_iteration += 1
+    command_line_arg = [my_config.config_file_path, str(current_iteration)]
+    if current_iteration > my_config.max_iterations:
+        logging.info("Maximum number of iterations reached for the Bayesian optimization")
+    else:
+        logging.info("Calling the optimizer for the next iteration: %d", current_iteration)
+        # Create and run dependent sbatch simulation for post-processing
+        optimizer_path = Path(my_config.optimizer_script).parent
+        optimizer_executable = Path(my_config.optimizer_script).name
+        _ = bo.submit_job(script_template=my_config.optimizer_script,
+                                            executable_name=optimizer_executable,
+                                            executable_path=optimizer_path,
+                                            time=my_config.optimizer_script_time,
+                                            dependency=[postprocessing_job_id],
+                                            command_line_arg=command_line_arg)
+
+
+# ======================
+# Main Function
+# ======================
+if __name__ in "__main__":
+
+    # Parse command line arguments
+    logging.basicConfig(level=logging.WARNING)
+    parser = argparse.ArgumentParser(description='Run bayesian optimization')
+    parser.add_argument('--configuration_name', required=False, type=str,
+                        default='./bayesian_optimization/config.yaml',
+                        help='Name of the configuration file')
+    parser.add_argument('--current_iteration', required=False, type=int, default=0,
+                        help='Current iteration number')
+
+    command_line_args = parser.parse_args()
+
+    main(command_line_args.configuration_name, command_line_args.current_iteration)
