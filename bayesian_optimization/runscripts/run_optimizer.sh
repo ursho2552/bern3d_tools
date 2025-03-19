@@ -16,4 +16,4 @@ PYTHON=py3_bayesian
 
 conda activate $PYTHON
 
-python ./$SLURM_JOB_NAME --configuration_name $1 --current_iteration $2
+python $SLURM_JOB_NAME --configuration_name $1 --current_iteration $2
