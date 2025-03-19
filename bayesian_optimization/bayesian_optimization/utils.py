@@ -125,6 +125,10 @@ def read_config_file(config_file: str,
     assert os.path.exists(config.optimizer_script), f"Path {config.optimizer_script} does not exist"
     assert os.path.exists(config.bern3d_template), f"Path {config.bern3d_template} does not exist"
     assert config.initialization_type in ["lhs", "random", "sobol", "halton", "hammersly", "lhs", "grid", "simulation"], "Initialization type not found"
+
+    assert config.output_tpye_bern3d in ["timeseries", "full"], "Output type not found"
+    assert config.output_timescale_bern3d in ["inst", "ave"], "Output timescale not found"
+
     assert "simulation_name_bern3d" in config.parameter_file, "simulation_name_bern3d not found in parameter file"
     if os.path.exists(config.output_dir_optimizer) is False:
         os.makedirs(config.output_dir_optimizer)

@@ -43,7 +43,7 @@ def main(configuration_file: str, current_iteration: int) -> None:
             initial_point_generator = my_config.initialization_type
 
         parameter_bounds = list(my_config.parameter_bounds.values())
-        print(parameter_bounds)
+
         my_optimizer = Optimizer(parameter_bounds,
                         base_estimator=my_config.surrogate_type,
                         acq_func=my_config.acquisition_type,
@@ -155,14 +155,12 @@ def main(configuration_file: str, current_iteration: int) -> None:
 if __name__ in "__main__":
 
     # Parse command line arguments
-    logging.basicConfig(level=logging.WARNING)
+    logging.basicConfig(level=logging.INFO)
     parser = argparse.ArgumentParser(description='Run bayesian optimization')
-    parser.add_argument('--configuration_name', required=False, type=str,
-                        default='./bayesian_optimization/config.yaml',
-                        help='Name of the configuration file')
+    parser.add_argument('--configuration_name', required=True, type=str,
+                        help='Path to the configuration file')
     parser.add_argument('--current_iteration', required=False, type=int, default=0,
-                        help='Current iteration number')
-
+                        help='Current iteration number (default 0)')
     command_line_args = parser.parse_args()
 
     main(command_line_args.configuration_name, command_line_args.current_iteration)

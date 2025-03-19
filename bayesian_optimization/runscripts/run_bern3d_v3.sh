@@ -3,6 +3,10 @@
 #SBATCH --mail-type=end,fail
 #SBATCH --partition=icpu-poeppelmeier
 #SBATCH --qos=job_icpu-poeppelmeier
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --mem=2G
+#SBATCH --cpus-per-task=6
 #SBATCH --output="%x.out"
 #SBATCH --error="%x.out"
 
