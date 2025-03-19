@@ -9,14 +9,15 @@ config_file_path: "/storage/homefs/uh24x373/bgc_bern/bayesian_optimization/bayes
 bern3d_script: "/storage/homefs/uh24x373/bgc_bern/bayesian_optimization/runscripts/run_bern3d_v3.sh"
 postprocessing_script: "/storage/homefs/uh24x373/bgc_bern/bayesian_optimization/runscripts/run_postprocessing.sh"
 optimizer_script: "/storage/homefs/uh24x373/bgc_bern/bayesian_optimization/runscripts/run_optimizer.sh"
+python_scripts: "/storage/homefs/uh24x373/bgc_bern/bayesian_optimization/"
 
 bern3d_script_time: "06:00:00"
-postprocessing_script_time: "02:00:00"
-optimizer_script_time: "00:20:00"
+postprocessing_script_time: "00:20:00"
+optimizer_script_time: "00:10:00"
 
 # Path to output directory of bern3d
 simulation_name_bern3d: "bay"
-output_type_bern3d: "timeseries"
+output_type_bern3d: "full"
 output_timescale_bern3d: "ave"
 work_directory: "/storage/scratch/users/uh24x373/Bayesian_optimizer_test/"
 output_files_bern3d: "/storage/scratch/users/uh24x373/Bayesian_optimizer_test/results/"

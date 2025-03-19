@@ -60,6 +60,7 @@ class ConfigParameters:
     bern3d_script: str
     postprocessing_script: str
     optimizer_script: str
+    python_scripts: str
 
     bern3d_script_time: str
     postprocessing_script_time: str

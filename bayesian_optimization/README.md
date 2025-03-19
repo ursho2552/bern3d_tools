@@ -44,6 +44,7 @@ config_file_path: "path_to_config_file/my_config_file.yaml"
 bern3d_script: "/bern3d_tools/bayesian_optimization/runscripts/run_bern3d_f90.sh"
 postprocessing_script: "/bern3d_tools/bayesian_optimization/runscripts/run_postprocessing.sh"
 optimizer_script: "/bern3d_tools/bayesian_optimization/runscripts/run_optimizer.sh"
+python_scripts: "/bern3d_tools/bayesian_optimization/"
 
 # The time limits for each of the scripts above in format (hh:mm:ss)
 bern3d_script_time: "00:40:00"

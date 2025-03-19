@@ -5,7 +5,7 @@ This file performs all postprocessing steps.
 """
 import argparse
 import pickle
-from pathlib import Path
+import logging
 
 import pandas as pd
 import bayesian_optimization as bo
@@ -47,8 +47,7 @@ def main(configuration_file, simulation_names) -> None:
     updated_df = pd.concat([current_df, new_df])
     updated_df.to_csv(f"{my_config.output_dir_optimizer}/{my_config.isotope}_df.csv")
 
-    with open(f"{my_config.output_dir_optimizer}/optimizer.pkl",
-              'wb', encoding='utf-8') as f:
+    with open(f"{my_config.output_dir_optimizer}/optimizer.pkl",'wb') as f:
         pickle.dump(my_optimizer, f)
 
 
@@ -58,6 +57,7 @@ def main(configuration_file, simulation_names) -> None:
 if __name__ in "__main__":
 
     # Parse command line arguments
+    logging.basicConfig(level=logging.INFO)
     parser = argparse.ArgumentParser(description='Postprocessing for Bayesian optimization module')
     parser.add_argument('--configuration_name', required=True, type=str,
                         help='Name of the configuration file')

@@ -145,9 +145,10 @@ def calculate_score_df(isotope: str, parameter_list: list[str],
         ratio_dic[sim] = {
                 f"{isotope_name_p}/{isotope_name_d}": float((model_xr[sim][isotope_name_p] / model_xr[sim][isotope_name_d]).mean()),
             }
-
+    logging.info("Starting parallel processing of simulations")
     with concurrent.futures.ThreadPoolExecutor() as executor:
         executor.map(lambda sim: path_mae(parameter_list, sim), sims)
+    logging.info("Completed parallel processing of simulations")
 
     mae_df = pd.DataFrame(mae_sim_dic)
     param_df = pd.DataFrame.from_dict(param_ref_dic, orient="index")

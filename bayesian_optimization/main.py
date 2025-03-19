@@ -117,16 +117,14 @@ def main(configuration_file: str, current_iteration: int) -> None:
         my_simulation_names.append(my_simulation_name)
 
     # Create and run dependent sbatch simulation for post-processing
-    post_processing_path = Path(my_config.postprocessing_script).parent
-    post_processing_executable = Path(my_config.postprocessing_script).name
-
     # command line arguments for the postprocessing script
     simulation_names = ",".join(my_simulation_names)
     command_line_arg = [my_config.config_file_path, simulation_names]
 
+    executable_name = f"{my_config.python_scripts}/postprocessing.py"
     postprocessing_job_id = bo.submit_job(script_template=my_config.postprocessing_script,
-                                        executable_name=post_processing_executable,
-                                        executable_path=post_processing_path,
+                                        executable_name=executable_name,
+                                        executable_path=my_config.work_directory,
                                         time=my_config.postprocessing_script_time,
                                         dependency=my_simulation_ids,
                                         command_line_arg=command_line_arg)
@@ -139,11 +137,10 @@ def main(configuration_file: str, current_iteration: int) -> None:
     else:
         logging.info("Calling the optimizer for the next iteration: %d", current_iteration)
         # Create and run dependent sbatch simulation for post-processing
-        optimizer_path = Path(my_config.optimizer_script).parent
-        optimizer_executable = Path(my_config.optimizer_script).name
+        executable_name = f"{my_config.python_scripts}/main.py"
         _ = bo.submit_job(script_template=my_config.optimizer_script,
-                                            executable_name=optimizer_executable,
-                                            executable_path=optimizer_path,
+                                            executable_name=executable_name,
+                                            executable_path=my_config.work_directory,
                                             time=my_config.optimizer_script_time,
                                             dependency=[postprocessing_job_id],
                                             command_line_arg=command_line_arg)
