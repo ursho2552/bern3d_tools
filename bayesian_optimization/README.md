@@ -26,6 +26,8 @@ The last step will create a conda environment called py3_bayesian, which you can
 
 To use the Bayesian optimization module, adapt the config file to fit your simulation; see examples for Bern3D_F90 (config.yaml) and Bern3D_V3 (config_bern3d_v3.yaml).
 
+Make sure that the `bern3d_template` directory only contains the compiled model and input files needed to run the model. You should be able to successfully run the model using only this directory. In case you are using Bern3D_V3, the parent directory should also contain the `input` directory with all the model contents needed before compilation. Furthermore, make sure all the files needed are present prior to running the optimizer (e.g., add the `missing.dat` file manually).
+
 Next, on the terminal run
 
 ```
@@ -60,8 +62,9 @@ output_type_bern3d: "timeseries"
 output_timescale_bern3d: "ave"
 ## Path to work directory where all the simulation results will be stored (e.g. scratch)
 work_directory: "/storage/scratch/users/my_username/Bayesian_optimizer/"
-## Results directory of Bern3D (in case the results and work directory are not the same)
-output_files_bern3d: "/storage/scratch/users/my_username/Bayesian_optimizer/results/"
+## Results directory of Bern3D and the optimizer, which will be in the workdirectory (will be overwritten during initialization)
+output_files_bern3d: None
+output_dir_optimizer: None
 
 # Choose model to run
 ## For Bern3d-v3, the flag has to be set to False else Bern3d_F90 is used
@@ -76,8 +79,6 @@ initialization_file: "/storage/homefs/my_username/bgc_bern/bern3d-v3/results/Spi
 # Define data for comparison
 ## Path to the validation data
 validation_data_path: "/storage/research/climate_climtip/my_username/data/"
-## Results directory of optimizer (in case these should not be stored in the work directory)
-output_dir_optimizer: "/storage/scratch/users/my_username/Bayesian_optimizer_test/bayesian_optimization/"
 
 # The number of iterations to run the Bayesian optimization algorithm
 max_iterations: 3
