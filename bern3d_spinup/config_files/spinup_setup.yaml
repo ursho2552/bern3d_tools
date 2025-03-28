@@ -1,0 +1,23 @@
+# Path to the script template
+bern3d_template: "/storage/homefs/uh24x373/bgc_bern/bern3d_f90/run"
+bern3d_executable_name: "RUNNAME"
+
+# Path to the work directory
+work_directory: "/storage/scratch/users/uh24x373/spinup_test"
+# Path of the sbatch script
+sbatch_script_phase1: "/storage/homefs/uh24x373/bgc_bern/bern3d_tools/bern3d_spinup/runscripts/run_bern3d_f90_phase1.sh"
+sbatch_script_phase2: "/storage/homefs/uh24x373/bgc_bern/bern3d_tools/bern3d_spinup/runscripts/run_bern3d_f90_phase2.sh"
+sbatch_script_phase3: "/storage/homefs/uh24x373/bgc_bern/bern3d_tools/bern3d_spinup/runscripts/run_bern3d_f90_phase3.sh"
+# Time to run the script
+time: "06:00:00"
+
+# Spinup phases to run
+# 1: spinup phase 1
+# 2: spinup phase 1 & 2
+# 3: spinup phase 1, 2 & 3
+spinup_phases: 3
+current_phase: 1
+# path to spinup configuration files
+spinup_config_files_phase1: "/storage/homefs/uh24x373/bgc_bern/bern3d_tools/bern3d_spinup/config_files/spinup_phase1.yaml"
+spinup_config_files_phase2: "/storage/homefs/uh24x373/bgc_bern/bern3d_tools/bern3d_spinup/config_files/spinup_phase2.yaml"
+spinup_config_files_phase3: "/storage/homefs/uh24x373/bgc_bern/bern3d_tools/bern3d_spinup/config_files/spinup_phase3.yaml"

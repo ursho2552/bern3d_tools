@@ -4,6 +4,24 @@ The Bern3D Tools repository contains various tools and scripts for working with 
 
 ## Components
 
+### Spinup Bern3D
+
+The spinup module provides an easy way of performing the spinup for the Bern3d_F90 version of the model in a single command.
+
+#### Features
+- **Multi-phase Spinup:** Supports up to 3 spinup phases, each with its own configuration and SLURM script.
+- **Dynamic Directory Creation:** Automatically creates run directories for each spinup phase and copies the necessary template files.
+- **Configuration Management:** Reads configuration files in YAML format and validates paths and parameters.
+- **SLURM Job Submission:** Submits jobs for each spinup phase with optional dependencies between phases.
+
+#### Usage
+To use the spinup module, adapt the `spinup_setup.yaml` file to fit your compiled model. The runscripts used to run the model on UBELIX are configured to use the investor partition `job_icpu-poeppelmeier`.
+
+Next, on the termial run:
+```bash
+python main.py --config_file <path_to_your_spinup_setup.yaml>
+```
+
 ### Bayesian Optimization
 
 The Bayesian Optimization module provides functionality for performing Bayesian optimization, particularly in the context of climate modeling and simulation management. It includes various functions for data loading, parameter updates, and simulation management.
