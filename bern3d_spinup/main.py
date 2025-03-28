@@ -12,7 +12,7 @@ def main(configuration_file: str) -> None:
     # Load the configuration file
     my_config = sp.read_config_file(configuration_file, sp.JobConfig)
 
-    for spinup_phase in range(1, my_config.spinup_phases + 1):
+    for spinup_phase in range(my_config.current_phase, my_config.spinup_phases + 1):
 
         # Load the configuration of the spinup phase
         if spinup_phase == 1:
@@ -41,7 +41,7 @@ def main(configuration_file: str) -> None:
 
         # Start the simulation with potential dependencies
         dependency = None
-        if spinup_phase > 1:
+        if spinup_phase > my_config.current_phase:
             dependency = [model_job_id]
 
         spinup_executable = f"Spinup{spinup_phase}"
