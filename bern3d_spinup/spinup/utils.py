@@ -211,7 +211,8 @@ def read_config_file(config_file: str, config_class: Type[T]) -> T:
     return config
 
 def create_spinup_run_directory(bern3d_template_path: str, bern3d_template_name: str,
-                                work_directory: str, current_spinup_phase: int ) -> str:
+                                work_directory: str, current_spinup_phase: int,
+                                replicate: int = None ) -> str:
     """
     Create a spinup run directory and copy the template files to it.
 
@@ -226,7 +227,11 @@ def create_spinup_run_directory(bern3d_template_path: str, bern3d_template_name:
     """
 
     # copy the whole directory
-    new_name = f"Spinup{current_spinup_phase}"
+    if replicate is not None:
+        new_name = f"Spinup{current_spinup_phase}_{replicate}"
+    else:
+        new_name = f"Spinup{current_spinup_phase}"
+
     new_simulation_path = Path(work_directory) / f"run_{new_name}"
     shutil.copytree(bern3d_template_path, new_simulation_path, dirs_exist_ok=True)
 

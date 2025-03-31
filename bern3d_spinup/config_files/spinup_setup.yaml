@@ -3,7 +3,7 @@ bern3d_template: "/storage/homefs/uh24x373/bgc_bern/bern3d_f90/run"
 bern3d_executable_name: "RUNNAME"
 
 # Path to the work directory
-work_directory: "/storage/scratch/users/uh24x373/spinup_test"
+work_directory: "/storage/scratch/users/uh24x373/spinup_test_replicas"
 # Path of the sbatch script
 sbatch_script_phase1: "/storage/homefs/uh24x373/bgc_bern/bern3d_tools/bern3d_spinup/runscripts/run_bern3d_f90_phase1.sh"
 sbatch_script_phase2: "/storage/homefs/uh24x373/bgc_bern/bern3d_tools/bern3d_spinup/runscripts/run_bern3d_f90_phase2.sh"
