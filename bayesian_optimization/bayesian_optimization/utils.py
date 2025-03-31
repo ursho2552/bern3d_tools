@@ -136,11 +136,14 @@ def read_config_file(config_file: str,
     if os.path.exists(config.work_directory) is False:
         logging.info("Work directory does not exist, creating it")
         os.makedirs(config.work_directory)
-        # create the output directory for the optimizer, which should be in the work directory
-        config.bayesian_optimization = os.path.join(config.work_directory, "bayesian_optimization")
-        config.output_files_bern3d = os.path.join(config.work_directory, "results")
-        logging.info("Creating output directories")
-        os.makedirs(config.bayesian_optimization)
+
+    # create the output directory for the optimizer, which should be in the work directory
+    config.output_dir_optimizer = os.path.join(config.work_directory, "bayesian_optimization")
+    config.output_files_bern3d = os.path.join(config.work_directory, "results")
+    logging.info("Creating output directories")
+    if os.path.exists(config.output_dir_optimizer) is False:
+        os.makedirs(config.output_dir_optimizer)
+    if os.path.exists(config.output_files_bern3d) is False:
         os.makedirs(config.output_files_bern3d)
 
     # check if the time is in the correct format
@@ -220,7 +223,9 @@ def update_parameter_file(next_parameters: list[float], bgc_parameter_file: str,
         if bern3d_f90:
             lines[line_number] = f"{param} = {value}\n"
         else:
-            lines[line_number] = f"{param}                               {value}\n"
+            # For Bern3D-V3, the parameter file format is different with the first 41 characters
+            # for the name and the rest for the value.
+            lines[line_number] = f"{param.ljust(41)}{value}\n"
 
     with open(bgc_parameter_file, 'w', encoding='utf-8') as file:
         file.writelines(lines)
