@@ -193,4 +193,11 @@ def compute_and_tell_optimizer(optimizer: Optimizer, isotope: str,
     optimizer.tell(tested_parameters, mae)
     logging.info("Told new parameters to optimizer")
 
+    # Correct indeces to match only simulation names
+    corrected_index = []
+    for index in test_df.index:
+        corrected_index.append(index.split("/")[-1].split(".")[0])
+
+    test_df.index = corrected_index
+
     return test_df, optimizer

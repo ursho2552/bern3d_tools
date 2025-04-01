@@ -8,6 +8,7 @@ import glob
 import shutil
 import logging
 import subprocess
+import fnmatch
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Type, Optional, Union
@@ -70,6 +71,8 @@ class ConfigParameters:
     simulation_name_bern3d: str
     output_type_bern3d: str
     output_timescale_bern3d: str
+    wildcard_simulation: str
+
     work_directory: str
     output_files_bern3d: str
     bern3d_f90: bool
@@ -160,9 +163,11 @@ def read_config_file(config_file: str,
 
 
 def access_file(model_output_files: str, simulation_name: Union[str, list[str]], output_type: str,
-                output_timescale: str) -> dict[str, xr.Dataset]:
+                output_timescale: str, simulation_initialization: bool = False,
+                wildcard: str = None) -> dict[str, xr.Dataset]:
     """
     Opens the corresponding file based on the provided parameters.
+    Add flags for sim restart and wildcard
 
     Parameters:
     model_output_files (str): Path to the model output files.
@@ -178,11 +183,18 @@ def access_file(model_output_files: str, simulation_name: Union[str, list[str]],
         simulation_name = [simulation_name]
 
     # Filter files based on simulation name, output type, and output timescale
-    all_files = glob.glob(f"{model_output_files}/*", recursive=True)
+    if simulation_initialization:
+        # Ensure wildcard is not None
+        wildcard = "*" if wildcard is None else wildcard
+        all_files = glob.glob(f"{model_output_files}/{wildcard}", recursive=True)
+    else:
+        all_files = glob.glob(f"{model_output_files}/*", recursive=True)
+
     filtered_files = []
     for sim in simulation_name:
         for file in all_files:
             if sim in file and output_type in file and output_timescale in file:
+            #if fnmatch.fnmatch(file, f"*{sim}*{output_type}*{output_timescale}*"):
                 filtered_files.append(file)
 
     # Check if the path is empty

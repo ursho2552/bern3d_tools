@@ -7,9 +7,7 @@ This file initializes the `bayesian_optimization` module.
 import argparse
 import logging
 import pickle
-from pathlib import Path
 
-import pandas as pd
 from skopt import Optimizer
 import bayesian_optimization as bo
 
@@ -35,12 +33,17 @@ def main(configuration_file: str, current_iteration: int) -> None:
             logging.info("Initialize with a simulation")
             n_initial_points = 1
             initial_point_generator = "random"
+            simulation_initialization = True
+            wildcard = my_config.wildcard_simulation
+
 
         else:
 
             logging.info("Initialize with %s", my_config.initialization_type)
             n_initial_points = my_config.n_initialization
             initial_point_generator = my_config.initialization_type
+            simulation_initialization = False
+            wildcard = None
 
         parameter_bounds = list(my_config.parameter_bounds.values())
 
@@ -52,14 +55,14 @@ def main(configuration_file: str, current_iteration: int) -> None:
                         n_initial_points=n_initial_points,
                         initial_point_generator=initial_point_generator)
 
-        initial_df = pd.DataFrame()
-
         if my_config.initialization_type == "simulation":
 
             simulation_dictionary = bo.access_file(model_output_files = my_config.output_files_bern3d,
                                              simulation_name = my_config.simulation_name_bern3d,
                                              output_type = my_config.output_type_bern3d,
-                                             output_timescale = my_config.output_timescale_bern3d)
+                                             output_timescale = my_config.output_timescale_bern3d,
+                                             simulation_initialization = simulation_initialization,
+                                             wildcard = wildcard)
 
             parameter_list = list(my_config.parameter_bounds.keys())
             initial_df, my_optimizer = bo.compute_and_tell_optimizer(optimizer = my_optimizer,
@@ -68,7 +71,7 @@ def main(configuration_file: str, current_iteration: int) -> None:
                                                                      simulation_dict = simulation_dictionary,
                                                                      validation_data_path = my_config.validation_data_path)
 
-        initial_df.to_csv(f"{my_config.output_dir_optimizer}/{my_config.isotope}_df.csv")
+            initial_df.to_csv(f"{my_config.output_dir_optimizer}/{my_config.isotope}_df.csv")
 
     else:
         logging.info("Loading the optimizer from the previous iteration")

@@ -3,6 +3,7 @@
 """
 This file performs all postprocessing steps.
 """
+import os
 import argparse
 import pickle
 import logging
@@ -25,8 +26,15 @@ def main(configuration_file, simulation_names) -> None:
     # Load the configuration file
     my_config = bo.read_config_file(configuration_file)
 
+    print(my_config.output_dir_optimizer)
+
     # Load the parameter iteration and optimizer
-    current_df = pd.read_csv(f"{my_config.output_dir_optimizer}/{my_config.isotope}_df.csv")
+    # Check if the file exists
+    first_iteration = False
+    if not os.path.exists(f"{my_config.output_dir_optimizer}/{my_config.isotope}_df.csv"):
+        first_iteration = True
+
+
     with open(f"{my_config.output_dir_optimizer}/optimizer.pkl",'rb') as f:
         my_optimizer = pickle.load(f)
 
@@ -44,7 +52,15 @@ def main(configuration_file, simulation_names) -> None:
                                                 simulation_dict = simulation_dictionary,
                                                 validation_data_path = my_config.validation_data_path)
 
-    updated_df = pd.concat([current_df, new_df])
+    if first_iteration:
+        updated_df = new_df
+    else:
+        # Load the existing dataframe
+        current_df = pd.read_csv(f"{my_config.output_dir_optimizer}/{my_config.isotope}_df.csv",
+                                 index_col=0)
+        
+        updated_df = pd.concat([current_df, new_df])
+
     updated_df.to_csv(f"{my_config.output_dir_optimizer}/{my_config.isotope}_df.csv")
 
     with open(f"{my_config.output_dir_optimizer}/optimizer.pkl",'wb') as f:
@@ -63,7 +79,6 @@ if __name__ in "__main__":
                         help='Name of the configuration file')
     parser.add_argument('--simulation_name', required=True, type=str,
                         help='Name of the simulation files from which the results are fetched')
-
 
     command_line_args = parser.parse_args()
 

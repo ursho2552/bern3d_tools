@@ -19,6 +19,7 @@ optimizer_script_time: "00:10:00"
 simulation_name_bern3d: "Bay_test"
 output_type_bern3d: "full"
 output_timescale_bern3d: "ave"
+wildcard_simulation: None
 
 # The path to the working directory
 work_directory: "/storage/scratch/users/uh24x373/Bayesian_optimizer_test/"
