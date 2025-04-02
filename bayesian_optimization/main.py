@@ -25,7 +25,7 @@ def main(configuration_file: str, current_iteration: int) -> None:
 
     # Load the configuration file
     my_config = bo.read_config_file(configuration_file)
-
+    
     if current_iteration == 0:
 
         if my_config.initialization_type == "simulation":

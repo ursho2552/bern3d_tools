@@ -158,6 +158,16 @@ def read_config_file(config_file: str,
     assert int(config.bern3d_script_time.split(":")[0]) < 96, "Hours in the time are more than 96"
     assert int(config.postprocessing_script_time.split(":")[0]) < 96, "Hours in the time are more than 96"
     assert int(config.optimizer_script_time.split(":")[0]) < 96, "Hours in the time are more than 96"
+    
+    # Make sure the bounds are given as tuples of floats
+    bound_values = config.parameter_bounds
+    for key, values in bound_values.items():
+        transformed_values = []
+        for value in values:
+            transformed_values.append(float(value))
+
+        bound_values[key] = tuple(transformed_values)
+    config.parameter_bounds = bound_values
 
     return config
 
