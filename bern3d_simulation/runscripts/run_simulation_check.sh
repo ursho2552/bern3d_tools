@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --mail-user=urs.hofmannelizondo@unibe.ch
+#SBATCH --mail-user=name.lastname@unibe.ch
 #SBATCH --mail-type=end,fail
 #SBATCH --partition=icpu-poeppelmeier
 #SBATCH --qos=job_icpu-poeppelmeier
