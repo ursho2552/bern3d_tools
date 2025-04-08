@@ -66,13 +66,13 @@ class ConfigMainParameters:
     # inverse output frequency for timeseries output [years]
     itstp_years: int
 
-    # NetCDF output precision (single or double)
-    precision: str
-
     # time (year AD, CE) for start of run (choose -1. to take time from restart)
     # year for orbital forcing if ebm_const_insol is chosen
     # classically 1765 for pre-industrial
     t00: int
+
+    # NetCDF output precision (single or double)
+    cdf_precision: str
 
     #########################################################
     # RESTART PARAMETERS
@@ -82,6 +82,10 @@ class ConfigMainParameters:
 
     # Output number of restart file. If 0, no restart file is read-in, if -1, last time step is read-in
     lin_nr: int
+
+    # Continue current run (true) or overwrite output (false)?
+    # If true and output exists, run will NOT restart from file above
+    lin_continue: bool
 
     #########################################################
     # RUN DESCRIPTION

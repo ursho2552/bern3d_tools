@@ -13,22 +13,26 @@ iwstp_years: 10
 # inverse output frequency for timeseries output [years]
 itstp_years: 1
 
-# NetCDF output precision (single or double)
-precision: "double"
-
 # time (year AD, CE) for start of run (choose -1. to take time from restart)
 # year for orbital forcing if ebm_const_insol is chosen
 # classically 1765 for pre-industrial
 t00: 1765
 
+# NetCDF output precision (single or double)
+cdf_precision: "double"
+
 #########################################################
 # RESTART PARAMETERS
 #########################################################
 # Filename of restart file (also for separate sediment restart files)
-lin_name: "Spinup2.00001765"
+lin_name: "Spinup1.00001765"
 
 # Output number of restart file. If 0, no restart file is read-in, if -1, last time step is read-in
-lin_nr: -1
+lin_nr: 0
+
+# Continue current run (true) or overwrite output (false)?
+# If true and output exists, run will NOT restart from file above
+lin_continue: True
 
 #########################################################
 # RUN DESCRIPTION
