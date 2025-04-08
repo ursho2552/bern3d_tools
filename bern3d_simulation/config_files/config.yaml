@@ -1,0 +1,18 @@
+# Path to the script template
+bern3d_template: /storage/homefs/uh24x373/bgc_bern/bern3d_f90/run
+bern3d_executable_name: RUNNAME
+
+# Path to the work directory
+work_directory: "/storage/scratch/users/uh24x373/test_restart/"
+simulation_name: "restart_test"
+
+# Path to the executables
+bern3d_submit_script: "/storage/homefs/uh24x373/bgc_bern/bern3d_tools/bern3d_simulation/runscripts/run_bern3d.sh"
+python_script: "/storage/homefs/uh24x373/bgc_bern/bern3d_tools/bern3d_simulation/runscripts/run_simulation_check.sh"
+main_script: "/storage/homefs/uh24x373/bgc_bern/bern3d_tools/bern3d_simulation/"
+
+time_bern3d : "00:05:00"
+time_python : "00:05:00"
+
+# Path to config file
+config_file: "/storage/homefs/uh24x373/bgc_bern/bern3d_tools/bern3d_simulation/config_files/config.yaml"

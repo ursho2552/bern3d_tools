@@ -4,7 +4,28 @@ The Bern3D Tools repository contains various tools and scripts for working with 
 
 ## Components
 
-### Spinup Bern3D
+### Bern3D Simulation
+
+The simulation module provides an easy way of running a simulation with automatic restart in case of timeout or crashes.
+
+#### Features
+
+- **Automated Job Submission**: Submits simulation jobs using SLURM with configurable parameters.
+- **Simulation Monitoring**: Checks the status of simulations to ensure they complete successfully.
+- **Restart Capability**: Automatically restarts simulations in case of failure or timeout.
+- **Configurable Workflow**: Uses a YAML configuration file to define paths, scripts, and parameters.
+
+#### Usage
+To use the simulation module, adapt the `config.yaml` file to fit your compiled model and workspace.
+
+Next, on the termial run:
+```bash
+python main.py --config_file ./config_files/config.yaml --initial_submission
+```
+
+For more details, refer to the [Bern3D Simulation README](https://gitlab.climate.unibe.ch/bern3d/bern3d_tools/-/blob/main/bern3d_simulation/README.md?ref_type=heads)
+
+### Bern3D Spinup
 
 The spinup module provides an easy way of performing the spinup for the Bern3d_F90 version of the model in a single command.
 
@@ -21,6 +42,8 @@ Next, on the termial run:
 ```bash
 python main.py --config_file <path_to_your_spinup_setup.yaml>
 ```
+
+For more details, refer to the [Bern3D Spinup README](https://gitlab.climate.unibe.ch/bern3d/bern3d_tools/-/blob/main/bern3d_spinup/README.md?ref_type=heads)
 
 ### Bayesian Optimization
 

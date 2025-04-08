@@ -1,0 +1,3 @@
+INFO:root:(Re)starting the simulation...
+['sbatch', '--job-name=restart_test', '--time=00:05:00', '--chdir=/storage/scratch/users/uh24x373/test_restart//run_restart_test', '/storage/homefs/uh24x373/bgc_bern/bern3d_tools/bern3d_simulation/runscripts/run_bern3d.sh']
+['sbatch', '--job-name=/storage/homefs/uh24x373/bgc_bern/bern3d_tools/bern3d_simulation//main.py', '--time=00:05:00', '--chdir=/storage/homefs/uh24x373/bgc_bern/bern3d_tools/bern3d_simulation/', '--dependency=afterany:18881895', '/storage/homefs/uh24x373/bgc_bern/bern3d_tools/bern3d_simulation/runscripts/run_simulation_check.sh', '/storage/homefs/uh24x373/bgc_bern/bern3d_tools/bern3d_simulation/config_files/config.yaml', '--restart']
