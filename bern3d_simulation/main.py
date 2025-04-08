@@ -5,7 +5,7 @@ This script is used to launch a simulation, and ensure it finishes in case of ti
 """
 import logging
 import argparse
-import simulation as sim
+import simulation.utils as sim
 
 def main(config_file: str, initial_submission: bool) -> None:
     """
@@ -54,8 +54,9 @@ def main(config_file: str, initial_submission: bool) -> None:
                     command_line_arg = command_line_arguments,
                     dependency_type='afterany')
 
-
 if __name__ == "__main__":
+    # Example usage:
+    # python main.py --config_file ./config_files/config.yaml --initial_submission
 
     logging.basicConfig(level=logging.INFO)
 
@@ -70,5 +71,3 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     main(args.config_file, args.initial_submission)
-
-    # python main.py --config_file ./config_files/config.yaml --initial_submission
