@@ -5,7 +5,7 @@ This file initializes the `bern3d_spinup` module.
 """
 
 import argparse
-import spinup as sp
+import spinup.utils as sp
 
 def main(configuration_file: str) -> None:
 
