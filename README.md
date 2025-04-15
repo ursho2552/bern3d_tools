@@ -8,7 +8,7 @@ To setup your python environment on UBELIX, you can follow these steps:
 2. Configure the current session to work propertly with conda by running: `eval "$(conda shell.bash hook)"`
 3. Create your environment by running `conda env create -f requirements.yml`
 
-The last step will create a conda environment called py3_bayesian, which you can use for running the compression scripts. You can test this environment by calling `conda activate py3_bern_tools`.
+The last step will create a conda environment called py3_bern_tools, which you can use for running the compression scripts. You can test this environment by calling `conda activate py3_bern_tools`.
 
 ## Components
 
