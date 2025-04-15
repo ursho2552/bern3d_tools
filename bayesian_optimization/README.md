@@ -11,17 +11,6 @@ git clone <repository-url>
 cd bern3d_tools/bayesian_optimization
 ```
 
-### Getting your python environment on UBELIX
-
-To setup your python environment on UBELIX, you can follow these steps:
-
-1. On the login node load the Anaconda module by running `module load Anaconda3`
-2. Configure the current session to work propertly with conda by running: `eval "$(conda shell.bash hook)"`
-3. Create your environment by running `conda env create -f requirements.yml`
-
-The last step will create a conda environment called py3_bayesian, which you can use for running the compression scripts. You can test this environment by calling `conda activate py3_bayesian`.
-
-
 ## Usage
 
 To use the Bayesian optimization module, adapt the config file to fit your simulation; see examples for Bern3D_F90 (config.yaml) and Bern3D_V3 (config_bern3d_v3.yaml).

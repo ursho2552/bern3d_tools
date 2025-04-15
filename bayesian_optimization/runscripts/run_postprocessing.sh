@@ -12,7 +12,7 @@ module purge
 module load Anaconda3
 eval "$(conda shell.bash hook)"
 
-PYTHON=py3_bayesian
+PYTHON=py3_bern_tools
 
 conda activate $PYTHON
 

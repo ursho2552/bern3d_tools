@@ -1,6 +1,14 @@
 # Bern3D Tools
 
-The Bern3D Tools repository contains various tools and scripts for working with the Bern3D climate model. This repository is organized into different components, each with its own specific functionality.
+The Bern3D Tools repository contains various tools and scripts for working with the Bern3D climate model. This repository is organized into different components, each with its own specific functionality. To use the tools you will need to create your own pyhton environment.
+
+To setup your python environment on UBELIX, you can follow these steps:
+
+1. On the login node load the Anaconda module by running `module load Anaconda3`
+2. Configure the current session to work propertly with conda by running: `eval "$(conda shell.bash hook)"`
+3. Create your environment by running `conda env create -f requirements.yml`
+
+The last step will create a conda environment called py3_bayesian, which you can use for running the compression scripts. You can test this environment by calling `conda activate py3_bern_tools`.
 
 ## Components
 

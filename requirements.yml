@@ -1,4 +1,4 @@
-name: py3_bayesian
+name: py3_bern_tools
 channels:
   - conda-forge
   - defaults
