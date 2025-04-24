@@ -5,7 +5,7 @@ ndtyear: 144
 runYears: 10000
 
 # Inverse output frequency for standard output [years]
-npstp_years: 10
+npstp_years: 1000
 
 # Inverse output frequency for full output/restart file [years]
 iwstp_years: 10

@@ -28,7 +28,7 @@ cdf_precision: "double"
 lin_name: "Spinup1.00001765"
 
 # Output number of restart file. If 0, no restart file is read-in, if -1, last time step is read-in
-lin_nr: 0
+lin_nr: -1
 
 # Continue current run (true) or overwrite output (false)?
 # If true and output exists, run will NOT restart from file above
