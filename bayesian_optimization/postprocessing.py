@@ -35,8 +35,8 @@ def main(configuration_file, simulation_names) -> None:
         first_iteration = True
 
 
-    with open(f"{my_config.output_dir_optimizer}/optimizer.pkl",'rb') as f:
-        my_optimizer = pickle.load(f)
+    with open(f"{my_config.output_dir_optimizer}/optimizer.pkl",'rb') as my_optimizer_file:
+        my_optimizer = pickle.load(my_optimizer_file)
 
     # get simulation results
     simulation_names = simulation_names.split(",")
@@ -45,12 +45,16 @@ def main(configuration_file, simulation_names) -> None:
                                     output_type = my_config.output_type_bern3d,
                                     output_timescale = my_config.output_timescale_bern3d)
 
+    # simulation_names containts the names of the simulation. The path to the paramter files is then
+    # config.work_directory + "run_" + simulation_name + "/" my_config.parameter_file.format(simulation_name)
+
     parameter_list = list(my_config.parameter_mapping.keys())
     new_df, my_optimizer = bo.compute_and_tell_optimizer(optimizer = my_optimizer,
-                                                isotope = my_config.isotope,
+                                                target = my_config.isotope,
                                                 parameter_list = parameter_list,
                                                 simulation_dict = simulation_dictionary,
-                                                validation_data_path = my_config.validation_data_path)
+                                                validation_data_path = my_config.validation_data_path,
+                                                parameter_file_template = my_config.parameter_file)
 
     if first_iteration:
         updated_df = new_df
@@ -58,13 +62,13 @@ def main(configuration_file, simulation_names) -> None:
         # Load the existing dataframe
         current_df = pd.read_csv(f"{my_config.output_dir_optimizer}/{my_config.isotope}_df.csv",
                                  index_col=0)
-        
+
         updated_df = pd.concat([current_df, new_df])
 
     updated_df.to_csv(f"{my_config.output_dir_optimizer}/{my_config.isotope}_df.csv")
 
-    with open(f"{my_config.output_dir_optimizer}/optimizer.pkl",'wb') as f:
-        pickle.dump(my_optimizer, f)
+    with open(f"{my_config.output_dir_optimizer}/optimizer.pkl",'wb') as my_optimizer_file:
+        pickle.dump(my_optimizer, my_optimizer_file)
 
 
 # ======================

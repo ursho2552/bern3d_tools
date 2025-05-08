@@ -11,13 +11,14 @@ import pickle
 from skopt import Optimizer
 import bayesian_optimization as bo
 
-def main(configuration_file: str, current_iteration: int) -> None:
+def main(configuration_file: str, current_iteration: int, email: str) -> None:
     """
     This is the main function for the Bayesian optimization module.
 
     Parameters:
     configuration_file (str): Path to the configuration file.
     current_iteration (int): Current iteration number.
+    email (str): Email address for job notifications.
 
     Returns:
     None
@@ -25,7 +26,7 @@ def main(configuration_file: str, current_iteration: int) -> None:
 
     # Load the configuration file
     my_config = bo.read_config_file(configuration_file)
-    
+
     if current_iteration == 0:
 
         if my_config.initialization_type == "simulation":
@@ -65,26 +66,28 @@ def main(configuration_file: str, current_iteration: int) -> None:
                                              wildcard = wildcard)
 
             parameter_list = list(my_config.parameter_bounds.keys())
+
             initial_df, my_optimizer = bo.compute_and_tell_optimizer(optimizer = my_optimizer,
-                                                                     isotope = my_config.isotope,
+                                                                     target = my_config.isotope,
                                                                      parameter_list = parameter_list,
                                                                      simulation_dict = simulation_dictionary,
-                                                                     validation_data_path = my_config.validation_data_path)
+                                                                     validation_data_path = my_config.validation_data_path,
+                                                                     parameter_file_template = my_config.parameter_file)
 
             initial_df.to_csv(f"{my_config.output_dir_optimizer}/{my_config.isotope}_df.csv")
 
     else:
         logging.info("Loading the optimizer from the previous iteration")
-        with open(f"{my_config.output_dir_optimizer}/optimizer.pkl", 'rb') as f:
-            my_optimizer = pickle.load(f)
+        with open(f"{my_config.output_dir_optimizer}/optimizer.pkl", 'rb') as my_optimizer_file:
+            my_optimizer = pickle.load(my_optimizer_file)
 
     #######################################
     ### Ask for next parameters to test ###
     #######################################
     next_parameters = my_optimizer.ask(n_points=my_config.batchsize)
     # Save the optimizer
-    with open(f"{my_config.output_dir_optimizer}/optimizer.pkl", 'wb') as f:
-        pickle.dump(my_optimizer, f)
+    with open(f"{my_config.output_dir_optimizer}/optimizer.pkl", 'wb') as my_optimizer_file:
+        pickle.dump(my_optimizer, my_optimizer_file)
 
     if my_config.batchsize == 1:
         next_parameters = [next_parameters]
@@ -114,7 +117,8 @@ def main(configuration_file: str, current_iteration: int) -> None:
         model_job_id = bo.submit_job(script_template=my_config.bern3d_script,
                                         executable_name=my_simulation_name,
                                         executable_path=new_simulation_path,
-                                        time=my_config.bern3d_script_time)
+                                        time=my_config.bern3d_script_time,
+                                        header_command=f"--mail-user=={email}")
 
         my_simulation_ids.append(model_job_id)
         my_simulation_names.append(my_simulation_name)
@@ -129,12 +133,14 @@ def main(configuration_file: str, current_iteration: int) -> None:
                                         executable_name=executable_name,
                                         executable_path=my_config.work_directory,
                                         time=my_config.postprocessing_script_time,
+                                        header_command=f"--mail-user=={email}",
                                         dependency=my_simulation_ids,
+                                        dependency_type="afterany",
                                         command_line_arg=command_line_arg)
 
     # call optimizer script for the next iteration
     current_iteration += 1
-    command_line_arg = [my_config.config_file_path, str(current_iteration)]
+    command_line_arg = [my_config.config_file_path, str(current_iteration), email]
     if current_iteration > my_config.max_iterations:
         logging.info("Maximum number of iterations reached for the Bayesian optimization")
     else:
@@ -145,6 +151,7 @@ def main(configuration_file: str, current_iteration: int) -> None:
                                             executable_name=executable_name,
                                             executable_path=my_config.work_directory,
                                             time=my_config.optimizer_script_time,
+                                            header_command=f"--mail-user=={email}",
                                             dependency=[postprocessing_job_id],
                                             command_line_arg=command_line_arg)
 
@@ -154,6 +161,8 @@ def main(configuration_file: str, current_iteration: int) -> None:
 # ======================
 if __name__ in "__main__":
 
+    # python main.py --configuration_name /storage/homefs/uh24x373/bgc_bern/bern3d_tools/bayesian_optimization/bayesian_optimization/config_temperature.yaml
+
     # Parse command line arguments
     logging.basicConfig(level=logging.INFO)
     parser = argparse.ArgumentParser(description='Run bayesian optimization')
@@ -161,6 +170,13 @@ if __name__ in "__main__":
                         help='Path to the configuration file')
     parser.add_argument('--current_iteration', required=False, type=int, default=0,
                         help='Current iteration number (default 0)')
-    command_line_args = parser.parse_args()
+    parser.add_argument("--email", required=False, type=str,
+                        help='Email address for job notifications')
 
-    main(command_line_args.configuration_name, command_line_args.current_iteration)
+    command_line_args = parser.parse_args()
+    # if args.email is None, ask the user for the email address
+    if command_line_args.email is None:
+        command_line_args.email = input("Please enter your email address: ")
+
+    main(command_line_args.configuration_name, command_line_args.current_iteration,
+         command_line_args.email)

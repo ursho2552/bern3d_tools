@@ -7,7 +7,7 @@ The `bern3d_spinup` module automates the spinup process for the Bern3D climate m
 - **Multi-phase Spinup:** Supports up to 3 spinup phases, each with its own configuration and SLURM script.
 - **Dynamic Directory Creation:** Automatically creates run directories for each spinup phase and copies the necessary template files.
 - **Configuration Management:** Reads configuration files in YAML format and validates paths and parameters.
-- **SLURM Job Submission:** Submits jobs for each spinup phase with optional dependencies between phases.
+- **SLURM Job Submission:** Submits jobs for each spinup phase with dependencies between phases.
 
 ---
 
@@ -18,14 +18,23 @@ bern3d_spinup/
 ├── main.py                   # Main script to initialize and run the spinup process
 ├── spinup/
 │   ├── utils.py               # Utility functions for configuration, directory creation, and job submission
+│   ├── override.py            # Fields to override depending on the spinup phase
 │   └── __init__.py             # Module initialization
 ├── config_files/
 │   ├── spinup_setup.yaml      # Main configuration file for the spinup process
-│   ├── spinup_phase1.yaml      # Configuration for spinup phase 1
-│   ├── spinup_phase2.yaml      # Configuration for spinup phase 2
-│   └── spinup_phase3.yaml      # Configuration for spinup phase 3
 ├── runscripts/
 │   ├── run_bern3d_f90_phase1.sh # SLURM script for spinup phase 1
 │   ├── run_bern3d_f90_phase2.sh  # SLURM script for spinup phase 2
 │   └── run_bern3d_f90_phase3.sh  # SLURM script for spinup phase 3
 ```
+
+## Usage and Workflow
+
+1. Edit the `spinup_setup.yaml` file to specify the paths to your Bern3D model you want to perform a spin-up.
+2. For non-standard cases, you may want to change the value of the parameters in `override.py` to fit your goals.
+3. Run the pipeline using:
+``` bash
+python main.py --config_file /path/to/config_file.yaml --email username@mail.com
+```
+
+This command will launch the first spinup and the subsequent spinups using an `afterok` dependency

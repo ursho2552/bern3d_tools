@@ -114,16 +114,6 @@ acquisitition_optimizer: "auto"
 job_number: -1
 ```
 
-## Testing
-
-To run the tests for the module (work in progress), navigate to the project directory and execute:
-
-```bash
-pytest tests/
-```
-
-This will run all the unit tests defined in `test_bayesian_optimization.py` to ensure the functionality works as expected.
-
 ## Contributions
 
 Contributions are welcome! Please feel free to submit a pull request or open an issue for any enhancements or bug fixes.

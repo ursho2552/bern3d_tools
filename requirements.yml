@@ -95,8 +95,12 @@ dependencies:
   - zlib=1.2.13=h5eee18b_1
   - zstd=1.5.6=hc292b87_0
   - pip:
+      - certifi==2025.4.26
+      - cftime==1.6.4.post1
       - mypy==1.15.0
       - mypy-extensions==1.0.0
+      - netcdf4==1.7.2
       - pandas-stubs==2.2.3.250308
       - types-pytz==2025.1.0.20250204
       - typing-extensions==4.12.2
+prefix: /storage/homefs/uh24x373/.conda/envs/py3_bern_tools

@@ -1,9 +1,10 @@
 # Path to the script template
 bern3d_template: "../../bern3d_f90/input"
-bern3d_executable_name: "RUNNAME"
+# Should contain the name of the executable and the path to the executable
+bern3d_executable_name: "../../bern3d_f90/run/RUNNAME"
 
 # Path to the work directory
-work_directory: "../spinup_test/"
+work_directory: "../../bern3d_f90/results/"
 # Path of the sbatch script
 sbatch_script_phase1: "runscripts/run_bern3d_f90_phase1.sh"
 sbatch_script_phase2: "runscripts/run_bern3d_f90_phase2.sh"
@@ -17,7 +18,3 @@ time: "06:00:00"
 # 3: spinup phase 1, 2 & 3
 spinup_phases: 3
 current_phase: 1
-# path to spinup configuration files
-spinup_config_files_phase1: "config_files/spinup_phase1.yaml"
-spinup_config_files_phase2: "config_files/spinup_phase2.yaml"
-spinup_config_files_phase3: "config_files/spinup_phase3.yaml"

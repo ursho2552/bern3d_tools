@@ -1,5 +1,4 @@
 #!/bin/bash
-#SBATCH --mail-user=name.lastname@unibe.ch
 #SBATCH --mail-type=end,fail
 
 # Parallel run

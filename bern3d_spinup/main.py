@@ -5,9 +5,20 @@ This file initializes the `bern3d_spinup` module.
 """
 
 import argparse
-import spinup.utils as sp
+import spinup as sp
 
-def main(configuration_file: str) -> None:
+def main(configuration_file: str, email: str) -> None:
+    """
+    This is the main function for the spinup module.
+    It handles the spinup process of the model.
+
+    Parameters:
+    configuration_file (str): Path to the configuration file.
+    email (str): Email address for job notifications.
+
+    Returns:
+    None
+    """
 
     # Load the configuration file
     my_config = sp.read_config_file(configuration_file, sp.JobConfig)
@@ -15,19 +26,12 @@ def main(configuration_file: str) -> None:
     for spinup_phase in range(my_config.current_phase, my_config.spinup_phases + 1):
 
         # Load the configuration of the spinup phase
-        if spinup_phase == 1:
-            spinup_config_file = my_config.spinup_config_files_phase1
-            spinup_executable_template = my_config.sbatch_script_phase1
+        spinup_executable_template = getattr(my_config, f"sbatch_script_phase{spinup_phase}")
 
-        elif spinup_phase == 2:
-            spinup_config_file = my_config.spinup_config_files_phase2
-            spinup_executable_template = my_config.sbatch_script_phase2
-
-        else:
-            spinup_config_file = my_config.spinup_config_files_phase3
-            spinup_executable_template = my_config.sbatch_script_phase3
-
-        spinup_config = sp.read_config_file(spinup_config_file, sp.ConfigMainParameters)
+        # Load the spinup configuration
+        parameter_file = f"{my_config.bern3d_template}/{my_config.bern3d_executable_name}.main.parameter"
+        spinup_config = sp.get_main_config_fields(parameter_file, sp.override_dictionary,
+                                                  spinup_phase)
 
         # Create a new directory for the spinup phase
         run_directory = sp.create_spinup_run_directory(my_config.bern3d_template,
@@ -49,16 +53,24 @@ def main(configuration_file: str) -> None:
                                         executable_name=spinup_executable,
                                         executable_path=run_directory,
                                         time=my_config.time,
+                                        header_command=f"--mail-user=={email}",
                                         dependency=dependency)
 
 
 if __name__ == "__main__":
+    # Usage:
+    # python main.py --config_file /path/to/config_file.yaml --email username@mail.com
 
-    # Example usage:
-    # # python main.py --config_file /storage/homefs/uh24x373/bgc_bern/bern3d_tools/bern3d_spinup/config_files/spinup_setup.yaml
     parser = argparse.ArgumentParser(description="Run the model spinup.")
     parser.add_argument("--config_file", required=True, type=str,
                         help='Path to the configuration file')
+    parser.add_argument("--email", required=False, type=str,
+                        help='Email address for job notifications')
+
     args = parser.parse_args()
 
-    main(args.config_file)
+    # if args.email is None, ask the user for the email address
+    if args.email is None:
+        args.email = input("Please enter your email address: ")
+
+    main(args.config_file, args.email)

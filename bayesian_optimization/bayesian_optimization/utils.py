@@ -8,7 +8,6 @@ import glob
 import shutil
 import logging
 import subprocess
-import fnmatch
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Type, Optional, Union
@@ -149,6 +148,9 @@ def read_config_file(config_file: str,
     if os.path.exists(config.output_files_bern3d) is False:
         os.makedirs(config.output_files_bern3d)
 
+    if config.initialization_file == "None":
+        config.initialization_file = None
+
     # check if the time is in the correct format
     assert config.bern3d_script_time.count(":") == 2, "Time format is incorrect (hh:mm:ss)"
     assert config.postprocessing_script_time.count(":") == 2, "Time format is incorrect (hh:mm:ss)"
@@ -158,7 +160,7 @@ def read_config_file(config_file: str,
     assert int(config.bern3d_script_time.split(":")[0]) < 96, "Hours in the time are more than 96"
     assert int(config.postprocessing_script_time.split(":")[0]) < 96, "Hours in the time are more than 96"
     assert int(config.optimizer_script_time.split(":")[0]) < 96, "Hours in the time are more than 96"
-    
+
     # Make sure the bounds are given as tuples of floats
     bound_values = config.parameter_bounds
     for key, values in bound_values.items():
@@ -349,7 +351,9 @@ def create_new_simulation(new_name: str, old_name: str,
 
 
 def submit_job(script_template: str, executable_name: str, executable_path: str, time: str,
+               header_command: Optional[str] = None,
                dependency: Optional[str] = None,
+               dependency_type: Optional[str] = 'afterok',
                command_line_arg: Optional[list[str]] = None) -> str:
     """
     Submit a job using sbatch with optional dependency and iteration parameters.
@@ -359,7 +363,9 @@ def submit_job(script_template: str, executable_name: str, executable_path: str,
     executable_name (str): Name of the executable.
     executable_path (str): Path to the executable.
     time (str): Time to run the script.
+    header_command (str): Header command to be added to the sbatch script.
     dependency (str): Dependency job id.
+    dependency_type (str): Type of dependency (afterok, afterany, other slurm option).
     command_line_arg (list): List of command line arguments.
 
     Returns:
@@ -372,6 +378,10 @@ def submit_job(script_template: str, executable_name: str, executable_path: str,
     command.append(f"--time={time}")
     command.append(f"--chdir={executable_path}")
 
+    # check if header command is provided
+    if header_command:
+        command.append(header_command)
+
     # check if dependency is provided
     if dependency:
 
@@ -380,7 +390,7 @@ def submit_job(script_template: str, executable_name: str, executable_path: str,
         else:
             dependency_ids = ":".join(dependency)
 
-        command.append(f"--dependency=afterok:{dependency_ids}")
+        command.append(f"--dependency={dependency_type}:{dependency_ids}")
 
     command.append(script_template)
 

@@ -3,11 +3,12 @@
 """
 This is the optimizer script for the Bayesian optimization module.
 """
-
+import os
+import re
 import logging
 from typing import Union
-import concurrent.futures
 
+from pathlib import Path
 import pandas as pd
 import xarray as xr
 import numpy as np
@@ -41,24 +42,10 @@ def find_nearest(array: npt.ArrayLike, value: float,
 
     return array[idx]
 
-def calculate_score_df(isotope: str, parameter_list: list[str],
-                       model_xr: dict[str, xr.Dataset], sims: list[str],
-                       validation_data_path: str) -> pd.DataFrame:
-    """
-    Calculate the parameter dataframe for a given isotope and multiple simulations.
-
-    Parameters:
-    isotope (str): Isotope type ("Pad" or "Thd").
-    parameter_list (list): List of parameters to calculate.
-    model_xr (dict): Dictionary of model datasets.
-    sims (list): List of simulation names.
-    validation_data_path (str): Path to the validation data.
-
-    Returns:
-    pd.DataFrame: Dataframe with calculated parameters and score for all simulations.
-    """
-
-    assert isotope in ["Pad", "Thd"], "Isotope must be either 'Pad' or 'Thd'."
+def score_isotope(isotope: str, parameter_list: list[str],
+                  model_xr: dict[str, xr.Dataset], sims: list[str],
+                  validation_data_path: str,
+                  parameter_files: list[str]) -> pd.DataFrame:
 
     # This feels dangerous.
     pd.options.mode.copy_on_write = True
@@ -106,18 +93,9 @@ def calculate_score_df(isotope: str, parameter_list: list[str],
         zt_idx = int(row['zt'])
         return var_model.isel(lon_t=lon_idx, lat_t=lat_idx, z_t=zt_idx).item()
 
-    def path_mae(parameter_list: list[str], sim: str) -> None:
-        """
-        Calculate the mean absolute error for a given simulation.
 
-        Parameters:
-        parameter_list (list): List of parameters to calculate.
-        sim (str): Simulation name.
-
-        Returns:
-        None
-        """
-        logging.info("Processing simulation: %s, Isotope: %s", sim, isotope)
+    logging.info("Starting processing of simulations")
+    for i, sim in enumerate(sims):
 
         param_ref_dic[sim] = {}
 
@@ -137,18 +115,11 @@ def calculate_score_df(isotope: str, parameter_list: list[str],
         logging.info("MAE for %s", sim)
 
         for param in parameter_list:
-            try:
-                param_ref_dic[sim][param] = float(model_xr[sim][f"param_bgc_{param}"].values)
-            except KeyError:
-                logging.error("Parameter %s not found in simulation %s", param, sim)
+            param_ref_dic[sim][param] = get_config_value(parameter_files[i], param)
 
         ratio_dic[sim] = {
                 f"{isotope_name_p}/{isotope_name_d}": float((model_xr[sim][isotope_name_p] / model_xr[sim][isotope_name_d]).mean()),
             }
-    logging.info("Starting parallel processing of simulations")
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-        executor.map(lambda sim: path_mae(parameter_list, sim), sims)
-    logging.info("Completed parallel processing of simulations")
 
     mae_df = pd.DataFrame(mae_sim_dic)
     param_df = pd.DataFrame.from_dict(param_ref_dic, orient="index")
@@ -160,16 +131,157 @@ def calculate_score_df(isotope: str, parameter_list: list[str],
 
     return param_df
 
-def compute_and_tell_optimizer(optimizer: Optimizer, isotope: str,
+def score_temperature_salinity(target: str, parameter_list: list[str],
+                               model_xr: dict[str, xr.Dataset], sims: list[str],
+                               validation_data_path: str,
+                               parameter_files: list[str],
+                               log_files: list[str]) -> pd.DataFrame:
+
+    # The observations of temperature and salinity are already gridded on the model grid
+    # and are stored in the run directory under the name world_68x46.observations.nc as the variable
+    # "temp" and "salt" with dimensions (dept_t, lat_t, lon_t). Hence, the model output, can be
+    # directly compared to the observations.
+
+    # Open the NetCDF observations file and convert target variable to DataFrame
+    target_file = f"{validation_data_path}/world_68x46.observations.nc"
+    assert os.path.exists(target_file), f"{target_file} file does not exist."
+
+    ds_target = xr.open_dataset(target_file)
+    if target.lower() == "temperature":
+        obs_df = ds_target["temp"].to_dataframe().reset_index().dropna()
+        obs_df = obs_df.rename(columns={"temp": "obs_temperature"})
+        sim_variable_name = "TEMP"
+        obs_variable_name = "obs_temperature"
+    elif target.lower() == "salinity":
+        obs_df = ds_target["salt"].to_dataframe().reset_index().dropna()
+        obs_df = obs_df.rename(columns={"salt": "obs_salinity"})
+        sim_variable_name = "S"
+        obs_variable_name = "obs_salinity"
+    else:
+        raise ValueError("target must be 'Temperature' or 'Salinity'.")
+
+    composite_scores: dict[str, float] = {}
+    param_ref_dic: dict[str, dict[str, float]] = {}
+
+    for i, sim in enumerate(sims):
+        # Check if the simulation was successful
+        if simulation_finished(log_files[i]):
+
+            model_ds = model_xr[sim].isel(time=-1)
+            # Create simulation dataframe.
+            sim_df = model_ds[sim_variable_name].to_dataframe().reset_index().dropna()
+            sim_df = sim_df.rename(columns={sim_variable_name: f"sim_{target.lower()}", 'z_t': 'dep_t'})
+
+            # Use merge to join on common coordinates
+            merged = pd.merge(obs_df, sim_df[['dep_t','lat_t','lon_t', f"sim_{target.lower()}"]],
+                            on=['dep_t','lat_t','lon_t'], how='inner')
+
+            # Compute the metrics
+            rmse = np.sqrt(((merged[f"sim_{target.lower()}"] - merged[obs_variable_name])**2).mean())
+            mae = (merged[f"sim_{target.lower()}"] - merged[obs_variable_name]).abs().mean()
+            corr = 1 - merged[f"sim_{target.lower()}"].corr( merged[obs_variable_name] )
+
+            composite_scores[sim] = ( rmse + mae + corr ) / 3
+        else:
+            # If the simulation is not finished, set the score to a large value
+            composite_scores[sim] = 1e6
+            logging.warning(f"Simulation {sim} not finished. Setting score to 1e6.")
+
+        param_ref_dic[sim] = {}
+        for param in parameter_list:
+            param_ref_dic[sim][param] = get_config_value(parameter_files[i], param)
+
+    mae_df = pd.DataFrame({target: composite_scores})
+    param_df = pd.DataFrame.from_dict(param_ref_dic, orient="index")
+    param_df[f"mae_{target.lower()}"] = param_df.index.map(mae_df[target])
+
+    return param_df
+
+def calculate_score_df(target: str, parameter_list: list[str],
+                       model_xr: dict[str, xr.Dataset], sims: list[str],
+                       validation_data_path: str,
+                       parameter_files: list[str],
+                       log_files: list[str]) -> pd.DataFrame:
+    """
+    Calculate the parameter dataframe for a given target and multiple simulations.
+
+    Parameters:
+    target (str): Target type ("Pad", "Thd", "Temperature", "Salinity").
+    parameter_list (list): List of parameters to calculate.
+    model_xr (dict): Dictionary of model datasets.
+    sims (list): List of simulation names.
+    validation_data_path (str): Path to the validation data.
+    parameter_files (list): list of paths to the parameter files.
+    log_files (list): list of paths to the log files.
+
+    Returns:
+    pd.DataFrame: Dataframe with calculated parameters and score for all simulations.
+    """
+
+    if target in ["Pad", "Thd"]:
+        param_df = score_isotope(parameter_list, model_xr, sims, validation_data_path,
+                                 parameter_files, log_files)
+
+    elif target in ["Temperature", "Salinity"]:
+        param_df = score_temperature_salinity(target, parameter_list, model_xr,
+                                              sims, validation_data_path, parameter_files,
+                                              log_files)
+    else:
+        raise ValueError("Target must be either 'Pad', 'Thd', 'Temperature', or 'Salinity'.")
+
+    return param_df
+
+def get_config_value(path: str, param: str):
+    """
+    Get the value of a parameter from a configuration file.
+
+    Parameters:
+    path (str): Path to the configuration file.
+    param (str): Parameter name to retrieve.
+
+    Returns:
+    str or int or float: Value of the parameter.
+    """
+
+    with open(path, encoding='utf-8') as f:
+        for line in f:
+            # strip comments and whitespace
+            line = line.split('#', 1)[0].strip()
+            if not line or '=' not in line:
+                continue
+
+            key, raw = map(str.strip, line.split('=', 1))
+            if key == param:
+                # infer numeric vs. string
+                if re.fullmatch(r'[+-]?\d+\.\d*([eE][+-]?\d+)?', raw):
+                    return float(raw)
+                if re.fullmatch(r'[+-]?\d+', raw):
+                    return int(raw)
+                return raw.strip('"').strip("'")
+    raise KeyError(f"No parameter named {param!r} in {path!r}")
+
+def simulation_finished(log_path: str) -> bool:
+    """
+    Returns True if 'SIMULATION COMPLETE' appears anywhere in the file.
+    """
+    needle = "SIMULATION COMPLETE"
+    with open(log_path, 'r', encoding='utf-8') as f:
+        for line in f:
+            if needle in line:
+                return True
+    return False
+
+def compute_and_tell_optimizer(optimizer: Optimizer, target: str,
                                parameter_list: list[str],
                                simulation_dict: dict[str, xr.Dataset],
-                               validation_data_path: str) -> tuple[pd.DataFrame, list]:
+                               validation_data_path: str,
+                               parameter_file_template: str) -> tuple[pd.DataFrame, list]:
     """
     Compute the mean absolute error (MAE) and update the optimizer.
 
     Parameters:
     optimizer (Optimizer): Optimizer instance.
-    isotope (str): Isotope type ("Pad" or "Thd").
+    target (str): target type ("Pad" or "Thd").
     parameter_list (list): List of parameters to calculate.
     simulation_dict (dict): Dictionary of simulation datasets.
     validation_data_path (str): Path to the validation data.
@@ -182,14 +294,26 @@ def compute_and_tell_optimizer(optimizer: Optimizer, isotope: str,
         parameter_list = [parameter_list]
 
     simulation_names = list(simulation_dict.keys())
+    # construct the paramter file name
+    # should be in the run directory of the simulation
 
-    test_df = calculate_score_df(isotope, parameter_list, simulation_dict,
-                                 simulation_names, validation_data_path)
+    parameter_files = []
+    log_files = []
+    for sim in simulation_names:
+        root_dir = Path(sim).parent.parent
+        name_sim = Path(sim).name.split(".")[0]
+        name_param = parameter_file_template.format(simulation_name_bern3d=name_sim)
+        parameter_files.append(f"{root_dir}/run_{name_sim}/{name_param}")
+        log_files.append(f"{root_dir}/run_{name_sim}/{name_sim}.out")
+
+    test_df = calculate_score_df(target, parameter_list, simulation_dict, simulation_names,
+                                 validation_data_path, parameter_files, log_files)
 
     test_df.replace(0,1e6,inplace=True)
     test_df.replace(np.nan,1e6,inplace=True)
     tested_parameters = test_df[parameter_list].values.tolist()
-    mae = test_df[f"mae_{isotope.lower()}"].values.tolist()
+    mae = test_df[f"mae_{target.lower()}"].values.tolist()
+
     optimizer.tell(tested_parameters, mae)
     logging.info("Told new parameters to optimizer")
 

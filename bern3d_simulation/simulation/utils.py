@@ -194,9 +194,10 @@ def check_simulation_status(run_path: str, executable_name: str,
     return finished
 
 def submit_job(script_template: str, executable_name: str, executable_path: str, time: str,
+               header_command: Optional[str] = None,
                dependency: Optional[str] = None,
-               command_line_arg: Optional[list[str]] = None,
-               dependency_type: Optional[str] = 'afterok') -> str:
+               dependency_type: Optional[str] = 'afterok',
+               command_line_arg: Optional[list[str]] = None) -> str:
     """
     Submit a job using sbatch with optional dependency and iteration parameters.
 
@@ -205,7 +206,9 @@ def submit_job(script_template: str, executable_name: str, executable_path: str,
     executable_name (str): Name of the executable.
     executable_path (str): Path to the executable.
     time (str): Time to run the script.
+    header_command (str): Header command to be added to the sbatch script.
     dependency (str): Dependency job id.
+    dependency_type (str): Type of dependency (afterok, afterany, other slurm option).
     command_line_arg (list): List of command line arguments.
 
     Returns:
@@ -217,6 +220,10 @@ def submit_job(script_template: str, executable_name: str, executable_path: str,
     command.append(f"--job-name={executable_name}")
     command.append(f"--time={time}")
     command.append(f"--chdir={executable_path}")
+
+    # check if header command is provided
+    if header_command:
+        command.append(header_command)
 
     # check if dependency is provided
     if dependency:

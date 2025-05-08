@@ -7,7 +7,7 @@ import logging
 import argparse
 import simulation.utils as sim
 
-def main(config_file: str, initial_submission: bool) -> None:
+def main(config_file: str, initial_submission: bool, email: str) -> None:
     """
     This function is used to launch a simulation, and ensure it finishes in case of timeout or
     crashes.
@@ -44,15 +44,17 @@ def main(config_file: str, initial_submission: bool) -> None:
 
     logging.info("(Re)starting the simulation...")
     sim_id = sim.submit_job(my_config.bern3d_submit_script, my_config.simulation_name,
-                                new_path, my_config.time_bern3d)
+                            new_path, my_config.time_bern3d, header_command=f"--mail-user=={email}")
 
     # Launch dependent job
-    command_line_arguments = [my_config.config_file, "--restart"]
+    command_line_arguments = [my_config.config_file, "--restart", email]
     executable_name = f"{my_config.main_script}/main.py"
+
     sim.submit_job(my_config.python_script, executable_name,
-                    my_config.main_script, my_config.time_python, dependency=[sim_id],
-                    command_line_arg = command_line_arguments,
-                    dependency_type='afterany')
+                   my_config.main_script, my_config.time_python,
+                   header_command=f"--mail-user=={email}",
+                   dependency=[sim_id], dependency_type='afterany',
+                    command_line_arg = command_line_arguments)
 
 if __name__ == "__main__":
     # Example usage:
@@ -67,7 +69,14 @@ if __name__ == "__main__":
                         action='store_true', help='Set the flag value to True.')
     parser.add_argument('--restart', dest='initial_submission', action='store_false',
                         help='Set the flag value to False.')
+    parser.add_argument("--email", required=False, type=str,
+                        help='Email address for job notifications')
     parser.set_defaults(initial_submission=False)
+
     args = parser.parse_args()
 
-    main(args.config_file, args.initial_submission)
+    # if args.email is None, ask the user for the email address
+    if args.email is None:
+        args.email = input("Please enter your email address: ")
+
+    main(args.config_file, args.initial_submission, args.email)
