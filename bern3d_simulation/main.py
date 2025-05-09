@@ -3,9 +3,21 @@
 """
 This script is used to launch a simulation, and ensure it finishes in case of timeout or crashes.
 """
+
+# ==================================================================================================
+# Add the grand-parent directory (repo root) to sys.path to import functions from the shared module
+# ==================================================================================================
+import os, sys
+# add the grand-parent dir (repo root) to sys.path
+repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir))
+if repo_root not in sys.path:
+    sys.path.insert(0, repo_root)
+
+import getpass
 import logging
 import argparse
 import simulation.utils as sim
+import bern3d_tools.shared.utils as shared_utils
 
 def main(config_file: str, initial_submission: bool, email: str) -> None:
     """
@@ -21,7 +33,8 @@ def main(config_file: str, initial_submission: bool, email: str) -> None:
     """
 
     # Load the configuration file
-    my_config = sim.read_config_file(config_file)
+    my_config = shared_utils.read_config_file(config_file, sim.JobConfig)
+    my_config = sim.check_configuration(my_config)
 
     if initial_submission:
         logging.info("Initial submission of the job.")
@@ -43,14 +56,14 @@ def main(config_file: str, initial_submission: bool, email: str) -> None:
             return
 
     logging.info("(Re)starting the simulation...")
-    sim_id = sim.submit_job(my_config.bern3d_submit_script, my_config.simulation_name,
+    sim_id = shared_utils.submit_job(my_config.bern3d_submit_script, my_config.simulation_name,
                             new_path, my_config.time_bern3d, header_command=f"--mail-user=={email}")
 
     # Launch dependent job
     command_line_arguments = [my_config.config_file, "--restart", email]
     executable_name = f"{my_config.main_script}/main.py"
 
-    sim.submit_job(my_config.python_script, executable_name,
+    shared_utils.submit_job(my_config.python_script, executable_name,
                    my_config.main_script, my_config.time_python,
                    header_command=f"--mail-user=={email}",
                    dependency=[sim_id], dependency_type='afterany',
@@ -75,8 +88,9 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    # if args.email is None, ask the user for the email address
+    # if args.email is None, the username is taken from the system
     if args.email is None:
-        args.email = input("Please enter your email address: ")
+        username = getpass.getuser()
+        args.email = f"{username}@unibe.ch"
 
     main(args.config_file, args.initial_submission, args.email)

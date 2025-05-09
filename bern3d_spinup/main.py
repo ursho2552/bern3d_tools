@@ -3,9 +3,21 @@
 """
 This file initializes the `bern3d_spinup` module.
 """
+# ==================================================================================================
+# Add the grand-parent directory (repo root) to sys.path to import functions from the shared module
+# ==================================================================================================
+import os, sys
+# add the grand-parent dir (repo root) to sys.path
+repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir))
+if repo_root not in sys.path:
+    sys.path.insert(0, repo_root)
 
+import getpass
+import logging
 import argparse
 import spinup as sp
+
+import bern3d_tools.shared.utils as shared_utils
 
 def main(configuration_file: str, email: str) -> None:
     """
@@ -21,7 +33,9 @@ def main(configuration_file: str, email: str) -> None:
     """
 
     # Load the configuration file
-    my_config = sp.read_config_file(configuration_file, sp.JobConfig)
+    my_config = shared_utils.read_config_file(configuration_file, sp.JobConfig)
+    # Check if the configuration file is valid
+    my_config = sp.check_configuration(my_config)
 
     for spinup_phase in range(my_config.current_phase, my_config.spinup_phases + 1):
 
@@ -49,7 +63,7 @@ def main(configuration_file: str, email: str) -> None:
             dependency = [model_job_id]
 
         spinup_executable = f"Spinup{spinup_phase}"
-        model_job_id = sp.submit_job(script_template=spinup_executable_template,
+        model_job_id = shared_utils.submit_job(script_template=spinup_executable_template,
                                         executable_name=spinup_executable,
                                         executable_path=run_directory,
                                         time=my_config.time,
@@ -61,6 +75,8 @@ if __name__ == "__main__":
     # Usage:
     # python main.py --config_file /path/to/config_file.yaml --email username@mail.com
 
+    logging.basicConfig(level=logging.INFO)
+
     parser = argparse.ArgumentParser(description="Run the model spinup.")
     parser.add_argument("--config_file", required=True, type=str,
                         help='Path to the configuration file')
@@ -69,8 +85,9 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    # if args.email is None, ask the user for the email address
+    # if args.email is None, the username is taken from the system
     if args.email is None:
-        args.email = input("Please enter your email address: ")
+        username = getpass.getuser()
+        args.email = f"{username}@unibe.ch"
 
     main(args.config_file, args.email)

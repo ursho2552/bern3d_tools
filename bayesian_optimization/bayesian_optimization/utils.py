@@ -101,78 +101,69 @@ class ConfigParameters:
     acquisitition_optimizer: str
     job_number: int
 
-
-def read_config_file(config_file: str,
-                      config_class: Type[ConfigParameters] = ConfigParameters) -> ConfigParameters:
+def check_configuration(config_dataclass: ConfigParameters) -> ConfigParameters:
     """
-    This function reads a configuration file, and fills in the attributes of the dataclass with
-    the respective entries in the configuratio file
+    Check the configuration file for errors and raise exceptions if any are found.
+    This function checks if the paths exist, if the work directory exists,
+    and if the spinup phases are valid.
 
     Parameters:
-    config_file (str): Path to the configuration file
-    config_class (Type[ConfigParameters]): The dataclass to be filled with the configuration entries
+    config_dataclass (ConfigParameters): The configuration dataclass to check.
 
     Returns:
-    ConfigParameters: The dataclass with the configuration entries filled in
+    ConfigParameters: The configuration dataclass if no errors are found.
     """
-    assert '.yaml' in config_file.lower(), "The configuration file should be a '.yaml' file"
-
-    with open(config_file, encoding='utf-8') as file:
-        config_list = yaml.load(file, Loader=yaml.FullLoader)
-
-    config = config_class(**config_list)
 
     # Check if the paths exist
-    assert os.path.exists(config.bern3d_script), f"Path {config.bern3d_script} does not exist"
-    assert os.path.exists(config.postprocessing_script), f"Path {config.postprocessing_script} does not exist"
-    assert os.path.exists(config.optimizer_script), f"Path {config.optimizer_script} does not exist"
-    assert os.path.exists(config.bern3d_template), f"Path {config.bern3d_template} does not exist"
-    assert config.initialization_type in ["lhs", "random", "sobol", "halton", "hammersly", "lhs", "grid", "simulation"], "Initialization type not found"
+    assert os.path.exists(config_dataclass.bern3d_script), f"Path {config_dataclass.bern3d_script} does not exist"
+    assert os.path.exists(config_dataclass.postprocessing_script), f"Path {config_dataclass.postprocessing_script} does not exist"
+    assert os.path.exists(config_dataclass.optimizer_script), f"Path {config_dataclass.optimizer_script} does not exist"
+    assert os.path.exists(config_dataclass.bern3d_template), f"Path {config_dataclass.bern3d_template} does not exist"
+    assert config_dataclass.initialization_type in ["lhs", "random", "sobol", "halton", "hammersly", "lhs", "grid", "simulation"], "Initialization type not found"
 
-    assert config.output_type_bern3d in ["timeseries", "full"], "Output type not found"
-    assert config.output_timescale_bern3d in ["inst", "ave"], "Output timescale not found"
+    assert config_dataclass.output_type_bern3d in ["timeseries", "full"], "Output type not found"
+    assert config_dataclass.output_timescale_bern3d in ["inst", "ave"], "Output timescale not found"
 
-    assert "simulation_name_bern3d" in config.parameter_file, "simulation_name_bern3d not found in parameter file"
+    assert "simulation_name_bern3d" in config_dataclass.parameter_file, "simulation_name_bern3d not found in parameter file"
 
     # Check if the work directory exists, if not create it as well as the output directories
-    if os.path.exists(config.work_directory) is False:
+    if os.path.exists(config_dataclass.work_directory) is False:
         logging.info("Work directory does not exist, creating it")
-        os.makedirs(config.work_directory)
+        os.makedirs(config_dataclass.work_directory)
 
     # create the output directory for the optimizer, which should be in the work directory
-    config.output_dir_optimizer = os.path.join(config.work_directory, "bayesian_optimization")
-    config.output_files_bern3d = os.path.join(config.work_directory, "results")
+    config_dataclass.output_dir_optimizer = os.path.join(config_dataclass.work_directory, "bayesian_optimization")
+    config_dataclass.output_files_bern3d = os.path.join(config_dataclass.work_directory, "results")
     logging.info("Creating output directories")
-    if os.path.exists(config.output_dir_optimizer) is False:
-        os.makedirs(config.output_dir_optimizer)
-    if os.path.exists(config.output_files_bern3d) is False:
-        os.makedirs(config.output_files_bern3d)
+    if os.path.exists(config_dataclass.output_dir_optimizer) is False:
+        os.makedirs(config_dataclass.output_dir_optimizer)
+    if os.path.exists(config_dataclass.output_files_bern3d) is False:
+        os.makedirs(config_dataclass.output_files_bern3d)
 
-    if config.initialization_file == "None":
-        config.initialization_file = None
+    if config_dataclass.initialization_file == "None":
+        config_dataclass.initialization_file = None
 
     # check if the time is in the correct format
-    assert config.bern3d_script_time.count(":") == 2, "Time format is incorrect (hh:mm:ss)"
-    assert config.postprocessing_script_time.count(":") == 2, "Time format is incorrect (hh:mm:ss)"
-    assert config.optimizer_script_time.count(":") == 2, "Time format is incorrect (hh:mm:ss)"
+    assert config_dataclass.bern3d_script_time.count(":") == 2, "Time format is incorrect (hh:mm:ss)"
+    assert config_dataclass.postprocessing_script_time.count(":") == 2, "Time format is incorrect (hh:mm:ss)"
+    assert config_dataclass.optimizer_script_time.count(":") == 2, "Time format is incorrect (hh:mm:ss)"
 
     # Check that hours in the time are less then 96
-    assert int(config.bern3d_script_time.split(":")[0]) < 96, "Hours in the time are more than 96"
-    assert int(config.postprocessing_script_time.split(":")[0]) < 96, "Hours in the time are more than 96"
-    assert int(config.optimizer_script_time.split(":")[0]) < 96, "Hours in the time are more than 96"
+    assert int(config_dataclass.bern3d_script_time.split(":")[0]) < 96, "Hours in the time are more than 96"
+    assert int(config_dataclass.postprocessing_script_time.split(":")[0]) < 96, "Hours in the time are more than 96"
+    assert int(config_dataclass.optimizer_script_time.split(":")[0]) < 96, "Hours in the time are more than 96"
 
     # Make sure the bounds are given as tuples of floats
-    bound_values = config.parameter_bounds
+    bound_values = config_dataclass.parameter_bounds
     for key, values in bound_values.items():
         transformed_values = []
         for value in values:
             transformed_values.append(float(value))
 
         bound_values[key] = tuple(transformed_values)
-    config.parameter_bounds = bound_values
+    config_dataclass.parameter_bounds = bound_values
 
-    return config
-
+    return config_dataclass
 
 def access_file(model_output_files: str, simulation_name: Union[str, list[str]], output_type: str,
                 output_timescale: str, simulation_initialization: bool = False,
@@ -348,57 +339,3 @@ def create_new_simulation(new_name: str, old_name: str,
         shutil.copytree(input_directory_path, f"{work_directory}/input", dirs_exist_ok=True)
 
     return new_simulation_path
-
-
-def submit_job(script_template: str, executable_name: str, executable_path: str, time: str,
-               header_command: Optional[str] = None,
-               dependency: Optional[str] = None,
-               dependency_type: Optional[str] = 'afterok',
-               command_line_arg: Optional[list[str]] = None) -> str:
-    """
-    Submit a job using sbatch with optional dependency and iteration parameters.
-
-    Parameters:
-    script_template (str): Path to the script template.
-    executable_name (str): Name of the executable.
-    executable_path (str): Path to the executable.
-    time (str): Time to run the script.
-    header_command (str): Header command to be added to the sbatch script.
-    dependency (str): Dependency job id.
-    dependency_type (str): Type of dependency (afterok, afterany, other slurm option).
-    command_line_arg (list): List of command line arguments.
-
-    Returns:
-    str: JobID of the submitted job.
-    """
-    # define command
-    command = ["sbatch"]
-
-    command.append(f"--job-name={executable_name}")
-    command.append(f"--time={time}")
-    command.append(f"--chdir={executable_path}")
-
-    # check if header command is provided
-    if header_command:
-        command.append(header_command)
-
-    # check if dependency is provided
-    if dependency:
-
-        if len(dependency) == 1:
-            dependency_ids = dependency[0]
-        else:
-            dependency_ids = ":".join(dependency)
-
-        command.append(f"--dependency={dependency_type}:{dependency_ids}")
-
-    command.append(script_template)
-
-    if (command_line_arg is not None) and (len(command_line_arg) > 0):
-        for arg in command_line_arg:
-            command.append(arg)
-
-    result = subprocess.run(command, check=True, capture_output=True, text=True)
-    job_id = result.stdout.strip().split()[-1]
-
-    return job_id

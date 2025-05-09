@@ -163,6 +163,9 @@ def score_temperature_salinity(target: str, parameter_list: list[str],
     composite_scores: dict[str, float] = {}
     param_ref_dic: dict[str, dict[str, float]] = {}
 
+    # Need to loop over the simulation names that have all, rahter than only those where it found a match in nc file
+    # if sim is in the simulaiton names, get index --> i
+    # else add a large value to the score, but still read in the paramters
     for i, sim in enumerate(sims):
         # Check if the simulation was successful
         if simulation_finished(log_files[i]):
@@ -185,7 +188,7 @@ def score_temperature_salinity(target: str, parameter_list: list[str],
         else:
             # If the simulation is not finished, set the score to a large value
             composite_scores[sim] = 1e6
-            logging.warning(f"Simulation {sim} not finished. Setting score to 1e6.")
+            logging.info(f"Simulation {sim} not finished. Setting score to 1e6.")
 
         param_ref_dic[sim] = {}
         for param in parameter_list:
@@ -265,8 +268,8 @@ def simulation_finished(log_path: str) -> bool:
     Returns True if 'SIMULATION COMPLETE' appears anywhere in the file.
     """
     needle = "SIMULATION COMPLETE"
-    with open(log_path, 'r', encoding='utf-8') as f:
-        for line in f:
+    with open(log_path, 'r', encoding='utf-8') as my_file:
+        for line in my_file:
             if needle in line:
                 return True
     return False

@@ -8,9 +8,7 @@ import shutil
 import subprocess
 from pathlib import Path
 from dataclasses import dataclass
-from typing import Type, Optional, TypeVar
-
-import yaml
+from typing import Optional, TypeVar
 
 Config = TypeVar('Config')
 
@@ -37,27 +35,32 @@ class JobConfig:
 
     config_file: str
 
-def read_config_file(config_file: str,
-                     config_class: Type[Config] = JobConfig) -> Config:
+def check_configuration(config_dataclass: JobConfig) -> JobConfig:
     """
-    This function reads a configuration file, and fills in the attributes of the dataclass with
-    the respective entries in the configuratio file
+    Check the configuration file for errors and raise exceptions if any are found.
+    This function checks if the paths exist, if the work directory exists,
+    and if the spinup phases are valid.
 
     Parameters:
-    config_file (str): Path to the configuration file
-    config_class (Type[ConfigParameters]): The dataclass to be filled with the configuration entries
+    config_dataclass (JobConfig): The configuration dataclass to check.
 
     Returns:
-    ConfigParameters: The dataclass with the configuration entries filled in
+    JobConfig: The configuration dataclass if no errors are found.
     """
-    assert '.yaml' in config_file.lower(), "The configuration file should be a '.yaml' file"
+    # Check if the configuration file is valid
+    assert '.yaml' in config_dataclass.config_file.lower(), "The configuration file should be a '.yaml' file"
 
-    with open(config_file, encoding='utf-8') as file:
-        config_list = yaml.load(file, Loader=yaml.FullLoader)
+    # Check if the template path exists
+    assert Path(config_dataclass.bern3d_template).exists(), f"Template path {config_dataclass.bern3d_template} does not exist."
 
-    config = config_class(**config_list)
+    # Check if the work directory exists
+    assert Path(config_dataclass.work_directory).exists(), f"Work directory {config_dataclass.work_directory} does not exist."
 
-    return config
+    # Check if the executable name is valid
+    assert config_dataclass.bern3d_executable_name, "Executable name cannot be empty."
+
+    return config_dataclass
+
 
 def create_simulation_run_directory(bern3d_template_path: str, bern3d_template_name: str,
                                     work_directory: str, new_name: str) -> str:
@@ -192,56 +195,3 @@ def check_simulation_status(run_path: str, executable_name: str,
             finished = True
 
     return finished
-
-def submit_job(script_template: str, executable_name: str, executable_path: str, time: str,
-               header_command: Optional[str] = None,
-               dependency: Optional[str] = None,
-               dependency_type: Optional[str] = 'afterok',
-               command_line_arg: Optional[list[str]] = None) -> str:
-    """
-    Submit a job using sbatch with optional dependency and iteration parameters.
-
-    Parameters:
-    script_template (str): Path to the script template.
-    executable_name (str): Name of the executable.
-    executable_path (str): Path to the executable.
-    time (str): Time to run the script.
-    header_command (str): Header command to be added to the sbatch script.
-    dependency (str): Dependency job id.
-    dependency_type (str): Type of dependency (afterok, afterany, other slurm option).
-    command_line_arg (list): List of command line arguments.
-
-    Returns:
-    str: JobID of the submitted job.
-    """
-    # define command
-    command = ["sbatch"]
-
-    command.append(f"--job-name={executable_name}")
-    command.append(f"--time={time}")
-    command.append(f"--chdir={executable_path}")
-
-    # check if header command is provided
-    if header_command:
-        command.append(header_command)
-
-    # check if dependency is provided
-    if dependency:
-
-        if len(dependency) == 1:
-            dependency_ids = dependency[0]
-        else:
-            dependency_ids = ":".join(dependency)
-
-        command.append(f"--dependency={dependency_type}:{dependency_ids}")
-
-    command.append(script_template)
-
-    if (command_line_arg is not None) and (len(command_line_arg) > 0):
-        for arg in command_line_arg:
-            command.append(arg)
-
-    result = subprocess.run(command, check=True, capture_output=True, text=True)
-    job_id = result.stdout.strip().split()[-1]
-
-    return job_id

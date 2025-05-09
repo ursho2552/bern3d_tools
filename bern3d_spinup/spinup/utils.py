@@ -6,12 +6,9 @@ These are the utility functions used to run the model spinup depending on the us
 import re
 import logging
 import shutil
-import subprocess
-from typing import Type, Optional, TypeVar, Any
+from typing import TypeVar, Any
 from dataclasses import dataclass, make_dataclass, field
 from pathlib import Path
-
-import yaml
 
 ConfigFile = TypeVar('ConfigFile')
 
@@ -141,46 +138,38 @@ def get_main_config_fields(config_file: str, override_dict: dict[str, Any],
     return parsed_config()
 
 
-def read_config_file(config_file: str, config_class: Type[ConfigFile]) -> ConfigFile:
+def check_configuration(config_dataclass: JobConfig) -> JobConfig:
     """
-    This function reads a configuration file, and fills in the attributes of the dataclass with
-    the respective entries in the configuratio file
+    Check the configuration file for errors and raise exceptions if any are found.
+    This function checks if the paths exist, if the work directory exists,
+    and if the spinup phases are valid.
 
     Parameters:
-    config_file (str): Path to the configuration file
-    config_class (Type[ConfigParameters]): The dataclass to be filled with the configuration entries
+    config_dataclass (JobConfig): The configuration dataclass to check.
 
     Returns:
-    ConfigParameters: The dataclass with the configuration entries filled in
+    JobConfig: The configuration dataclass if no errors are found.
     """
-    assert '.yaml' in config_file.lower(), "The configuration file should be a '.yaml' file"
 
-    with open(config_file, encoding='utf-8') as file:
-        config_list = yaml.load(file, Loader=yaml.FullLoader)
+    # Check if the paths exist
+    paths_to_check = [config_dataclass.bern3d_template, config_dataclass.sbatch_script_phase1,
+                        config_dataclass.sbatch_script_phase2, config_dataclass.sbatch_script_phase3]
 
-    config = config_class(**config_list)
+    for path in paths_to_check:
+        if not Path(path).exists():
+            raise FileNotFoundError(f"Path {path} does not exist.")
 
-    # If the config file is of type JobConfig, check that the paths exist
-    if isinstance(config, JobConfig):
-        # Check if the paths exist
-        paths_to_check = [config.bern3d_template, config.sbatch_script_phase1,
-                          config.sbatch_script_phase2, config.sbatch_script_phase3]
-
-        for path in paths_to_check:
-            if not Path(path).exists():
-                raise FileNotFoundError(f"Path {path} does not exist.")
-
-        # Check if the work directory exists
-        if not Path(config.work_directory).exists():
-            # create it if it does not exist
-            Path(config.work_directory).mkdir(parents=True, exist_ok=True)
+    # Check if the work directory exists
+    if not Path(config_dataclass.work_directory).exists():
+        # create it if it does not exist
+        Path(config_dataclass.work_directory).mkdir(parents=True, exist_ok=True)
 
 
-        assert config.spinup_phases in [1, 2, 3], "Spinup phases must be either 1, 2 or 3"
-        assert config.current_phase <= config.spinup_phases, "Current phase must be either 1, 2 or 3 and less than or equal to spinup phases"
-        assert config.current_phase > 0, "Current phase must be either 1, 2 or 3 and greater than 0"
+    assert config_dataclass.spinup_phases in [1, 2, 3], "Spinup phases must be either 1, 2 or 3"
+    assert config_dataclass.current_phase <= config_dataclass.spinup_phases, "Current phase must be either 1, 2 or 3 and less than or equal to spinup phases"
+    assert config_dataclass.current_phase > 0, "Current phase must be either 1, 2 or 3 and greater than 0"
 
-    return config
+    return config_dataclass
 
 def create_spinup_run_directory(bern3d_template_path: str, bern3d_executable_path: str,
                                 work_directory: str, phase: int,
@@ -268,57 +257,3 @@ def save_config_as_assignment(config: ConfigFile, config_file_path: str) -> None
                 value = f"{value}.0"
 
             f.write(f"{key} = {value}\n")
-
-
-def submit_job(script_template: str, executable_name: str, executable_path: str, time: str,
-               header_command: Optional[str] = None,
-               dependency: Optional[str] = None,
-               dependency_type: Optional[str] = 'afterok',
-               command_line_arg: Optional[list[str]] = None) -> str:
-    """
-    Submit a job using sbatch with optional dependency and iteration parameters.
-
-    Parameters:
-    script_template (str): Path to the script template.
-    executable_name (str): Name of the executable.
-    executable_path (str): Path to the executable.
-    time (str): Time to run the script.
-    header_command (str): Header command to be added to the sbatch script.
-    dependency (str): Dependency job id.
-    dependency_type (str): Type of dependency (afterok, afterany, other slurm option).
-    command_line_arg (list): List of command line arguments.
-
-    Returns:
-    str: JobID of the submitted job.
-    """
-    # define command
-    command = ["sbatch"]
-
-    command.append(f"--job-name={executable_name}")
-    command.append(f"--time={time}")
-    command.append(f"--chdir={executable_path}")
-
-    # check if header command is provided
-    if header_command:
-        command.append(header_command)
-
-    # check if dependency is provided
-    if dependency:
-
-        if len(dependency) == 1:
-            dependency_ids = dependency[0]
-        else:
-            dependency_ids = ":".join(dependency)
-
-        command.append(f"--dependency={dependency_type}:{dependency_ids}")
-
-    command.append(script_template)
-
-    if (command_line_arg is not None) and (len(command_line_arg) > 0):
-        for arg in command_line_arg:
-            command.append(arg)
-
-    result = subprocess.run(command, check=True, capture_output=True, text=True)
-    job_id = result.stdout.strip().split()[-1]
-
-    return job_id

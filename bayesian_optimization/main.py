@@ -3,13 +3,23 @@
 """
 This file initializes the `bayesian_optimization` module.
 """
+# ==================================================================================================
+# Add the grand-parent directory (repo root) to sys.path to import functions from the shared module
+# ==================================================================================================
+import os, sys
+# add the grand-parent dir (repo root) to sys.path
+repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir))
+if repo_root not in sys.path:
+    sys.path.insert(0, repo_root)
 
+import getpass
 import argparse
 import logging
 import pickle
 
 from skopt import Optimizer
 import bayesian_optimization as bo
+import bern3d_tools.shared.utils as shared_utils
 
 def main(configuration_file: str, current_iteration: int, email: str) -> None:
     """
@@ -25,7 +35,8 @@ def main(configuration_file: str, current_iteration: int, email: str) -> None:
     """
 
     # Load the configuration file
-    my_config = bo.read_config_file(configuration_file)
+    my_config = shared_utils.read_config_file(configuration_file, bo.ConfigParameters)
+    my_config = bo.check_config_file(my_config)
 
     if current_iteration == 0:
 
@@ -114,7 +125,7 @@ def main(configuration_file: str, current_iteration: int, email: str) -> None:
                                  bern3d_f90=my_config.bern3d_f90)
 
         # run the new simulation
-        model_job_id = bo.submit_job(script_template=my_config.bern3d_script,
+        model_job_id = shared_utils.submit_job(script_template=my_config.bern3d_script,
                                         executable_name=my_simulation_name,
                                         executable_path=new_simulation_path,
                                         time=my_config.bern3d_script_time,
@@ -129,7 +140,7 @@ def main(configuration_file: str, current_iteration: int, email: str) -> None:
     command_line_arg = [my_config.config_file_path, simulation_names]
 
     executable_name = f"{my_config.python_scripts}/postprocessing.py"
-    postprocessing_job_id = bo.submit_job(script_template=my_config.postprocessing_script,
+    postprocessing_job_id = shared_utils.submit_job(script_template=my_config.postprocessing_script,
                                         executable_name=executable_name,
                                         executable_path=my_config.work_directory,
                                         time=my_config.postprocessing_script_time,
@@ -147,7 +158,7 @@ def main(configuration_file: str, current_iteration: int, email: str) -> None:
         logging.info("Calling the optimizer for the next iteration: %d", current_iteration)
         # Create and run dependent sbatch simulation for post-processing
         executable_name = f"{my_config.python_scripts}/main.py"
-        _ = bo.submit_job(script_template=my_config.optimizer_script,
+        _ = shared_utils.submit_job(script_template=my_config.optimizer_script,
                                             executable_name=executable_name,
                                             executable_path=my_config.work_directory,
                                             time=my_config.optimizer_script_time,
@@ -174,9 +185,11 @@ if __name__ in "__main__":
                         help='Email address for job notifications')
 
     command_line_args = parser.parse_args()
-    # if args.email is None, ask the user for the email address
+
+    # if args.email is None, the username is taken from the system
     if command_line_args.email is None:
-        command_line_args.email = input("Please enter your email address: ")
+        username = getpass.getuser()
+        command_line_args.email = f"{username}@unibe.ch"
 
     main(command_line_args.configuration_name, command_line_args.current_iteration,
          command_line_args.email)
