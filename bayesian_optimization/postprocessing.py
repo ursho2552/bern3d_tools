@@ -3,13 +3,19 @@
 """
 This file performs all postprocessing steps.
 """
-import os
+import os, sys
+# add the grand-parent dir (repo root) to sys.path
+repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir))
+if repo_root not in sys.path:
+    sys.path.insert(0, repo_root)
+
 import argparse
 import pickle
 import logging
 
 import pandas as pd
 import bayesian_optimization as bo
+import bern3d_tools.shared.utils as shared_utils
 
 def main(configuration_file, simulation_names) -> None:
     """
@@ -24,7 +30,8 @@ def main(configuration_file, simulation_names) -> None:
     """
 
     # Load the configuration file
-    my_config = bo.read_config_file(configuration_file)
+    my_config = shared_utils.read_config_file(configuration_file, bo.ConfigParameters)
+    my_config = bo.check_configuration(my_config)
 
     print(my_config.output_dir_optimizer)
 

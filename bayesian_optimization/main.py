@@ -36,7 +36,7 @@ def main(configuration_file: str, current_iteration: int, email: str) -> None:
 
     # Load the configuration file
     my_config = shared_utils.read_config_file(configuration_file, bo.ConfigParameters)
-    my_config = bo.check_config_file(my_config)
+    my_config = bo.check_configuration(my_config)
 
     if current_iteration == 0:
 
