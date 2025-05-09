@@ -12,7 +12,6 @@ repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, o
 if repo_root not in sys.path:
     sys.path.insert(0, repo_root)
 
-import getpass
 import logging
 import argparse
 import spinup as sp
@@ -87,7 +86,6 @@ if __name__ == "__main__":
 
     # if args.email is None, the username is taken from the system
     if args.email is None:
-        username = getpass.getuser()
-        args.email = f"{username}@unibe.ch"
+        args.email = shared_utils.get_user_email()
 
     main(args.config_file, args.email)

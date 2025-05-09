@@ -12,7 +12,6 @@ repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, o
 if repo_root not in sys.path:
     sys.path.insert(0, repo_root)
 
-import getpass
 import argparse
 import logging
 import pickle
@@ -188,8 +187,7 @@ if __name__ in "__main__":
 
     # if args.email is None, the username is taken from the system
     if command_line_args.email is None:
-        username = getpass.getuser()
-        command_line_args.email = f"{username}@unibe.ch"
+        command_line_args.email = shared_utils.get_user_email()
 
     main(command_line_args.configuration_name, command_line_args.current_iteration,
          command_line_args.email)

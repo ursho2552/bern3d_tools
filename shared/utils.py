@@ -3,13 +3,28 @@
 """
 These are the utility functions used across the bern3d_tools package
 """
-
+import getpass
 import yaml
+import logging
 import subprocess
 from typing import Optional, Type, TypeVar
 
 
 Config = TypeVar('Config')
+
+def get_user_email() -> str:
+    """
+    Get the email address of the user.
+
+    Returns:
+    str: The email address of the user
+    """
+
+    username = getpass.getuser()
+    address = f"{username}@campus.unibe.ch"
+    logging.info(f"Using {address} as email address for job notifications")
+
+    return address
 
 def read_config_file(config_file: str, config_class: Type[Config]) -> Config:
     """
