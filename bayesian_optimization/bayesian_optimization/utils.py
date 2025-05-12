@@ -7,12 +7,10 @@ import os
 import glob
 import shutil
 import logging
-import subprocess
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Type, Optional, Union
+from typing import Optional, Union
 
-import yaml
 import xarray as xr
 
 @dataclass
@@ -194,25 +192,32 @@ def access_file(model_output_files: str, simulation_name: Union[str, list[str]],
         all_files = glob.glob(f"{model_output_files}/*", recursive=True)
 
     filtered_files = []
+    unsuccessful_files = []
     for sim in simulation_name:
-        for file in all_files:
-            if sim in file and output_type in file and output_timescale in file:
-            #if fnmatch.fnmatch(file, f"*{sim}*{output_type}*{output_timescale}*"):
-                filtered_files.append(file)
+    # find all files matching this sim, the timescale and the type
+    #if fnmatch.fnmatch(file, f"*{sim}*{output_type}*{output_timescale}*"):
+        matches = [
+            f for f in all_files
+            if sim in f and output_timescale in f and output_type in f
+        ]
+        if matches:
+            # add every matching file to filtered_files
+            filtered_files.extend(matches)
+        else:
+            # remember which sim had no files
+            unsuccessful_files.append(f"{model_output_files}/{sim}.not_found_{output_timescale}_{output_type}.nc")
+            logging.warning("Simulation %s does not match the output type or timescale", sim)
 
-    # Check if the path is empty
-    if not filtered_files:
-        raise FileNotFoundError(f"No files found for {model_output_files}")
+    # create dictionary with the simulation name as the key and the file as the value
+    # and open the file with xarray. Add an empty xarray dataset if the file is not found
+    # for the simulation name
+    result_dict = {}
+    for file in filtered_files:
+        result_dict[file] = xr.open_dataset(file, decode_times=False)
+    for file in unsuccessful_files:
+        result_dict[file] = xr.Dataset()
 
-    if len(filtered_files) == 1:
-        single_file = filtered_files[0]
-        return {single_file: xr.open_dataset(single_file, decode_times=False)}
-
-    # Return a dictionary of all filtered paths
-    return {
-        file: xr.open_dataset(file, decode_times=False)
-        for file in filtered_files
-    }
+    return result_dict
 
 def update_parameter_file(next_parameters: list[float], bgc_parameter_file: str,
                           parameter_mapping: dict[str, float],

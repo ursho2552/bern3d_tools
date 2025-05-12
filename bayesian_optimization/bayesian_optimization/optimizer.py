@@ -185,6 +185,7 @@ def score_temperature_salinity(target: str, parameter_list: list[str],
             corr = 1 - merged[f"sim_{target.lower()}"].corr( merged[obs_variable_name] )
 
             composite_scores[sim] = ( rmse + mae + corr ) / 3
+            composite_scores[sim] = mae
         else:
             # If the simulation is not finished, set the score to a large value
             composite_scores[sim] = 1e6

@@ -52,9 +52,6 @@ def main(configuration_file, simulation_names) -> None:
                                     output_type = my_config.output_type_bern3d,
                                     output_timescale = my_config.output_timescale_bern3d)
 
-    # simulation_names containts the names of the simulation. The path to the paramter files is then
-    # config.work_directory + "run_" + simulation_name + "/" my_config.parameter_file.format(simulation_name)
-
     parameter_list = list(my_config.parameter_mapping.keys())
     new_df, my_optimizer = bo.compute_and_tell_optimizer(optimizer = my_optimizer,
                                                 target = my_config.isotope,
