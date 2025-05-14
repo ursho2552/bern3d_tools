@@ -128,7 +128,7 @@ def main(configuration_file: str, current_iteration: int, email: str) -> None:
                                         executable_name=my_simulation_name,
                                         executable_path=new_simulation_path,
                                         time=my_config.bern3d_script_time,
-                                        header_command=f"--mail-user=={email}")
+                                        header_command=f"--mail-user={email}")
 
         my_simulation_ids.append(model_job_id)
         my_simulation_names.append(my_simulation_name)
@@ -143,7 +143,7 @@ def main(configuration_file: str, current_iteration: int, email: str) -> None:
                                         executable_name=executable_name,
                                         executable_path=my_config.work_directory,
                                         time=my_config.postprocessing_script_time,
-                                        header_command=f"--mail-user=={email}",
+                                        header_command=f"--mail-user={email}",
                                         dependency=my_simulation_ids,
                                         dependency_type="afterany",
                                         command_line_arg=command_line_arg)
@@ -161,7 +161,7 @@ def main(configuration_file: str, current_iteration: int, email: str) -> None:
                                             executable_name=executable_name,
                                             executable_path=my_config.work_directory,
                                             time=my_config.optimizer_script_time,
-                                            header_command=f"--mail-user=={email}",
+                                            header_command=f"--mail-user={email}",
                                             dependency=[postprocessing_job_id],
                                             command_line_arg=command_line_arg)
 
@@ -171,7 +171,7 @@ def main(configuration_file: str, current_iteration: int, email: str) -> None:
 # ======================
 if __name__ in "__main__":
 
-    # python main.py --configuration_name /storage/homefs/uh24x373/bgc_bern/bern3d_tools/bayesian_optimization/bayesian_optimization/config_temperature.yaml
+    # python main.py --configuration_name /storage/homefs/uh24x373/bgc_bern/bern3d_tools/bayesian_optimization/bayesian_optimization/config_temperature.yaml --email urs.hofmannelizondo@unibe.ch
 
     # Parse command line arguments
     logging.basicConfig(level=logging.INFO)

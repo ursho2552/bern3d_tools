@@ -66,7 +66,7 @@ def main(configuration_file: str, email: str) -> None:
                                         executable_name=spinup_executable,
                                         executable_path=run_directory,
                                         time=my_config.time,
-                                        header_command=f"--mail-user=={email}",
+                                        header_command=f"--mail-user={email}",
                                         dependency=dependency)
 
 

@@ -147,18 +147,22 @@ def score_temperature_salinity(target: str, parameter_list: list[str],
     assert os.path.exists(target_file), f"{target_file} file does not exist."
 
     ds_target = xr.open_dataset(target_file)
-    if target.lower() == "temperature":
-        obs_df = ds_target["temp"].to_dataframe().reset_index().dropna()
-        obs_df = obs_df.rename(columns={"temp": "obs_temperature"})
-        sim_variable_name = "TEMP"
-        obs_variable_name = "obs_temperature"
-    elif target.lower() == "salinity":
-        obs_df = ds_target["salt"].to_dataframe().reset_index().dropna()
-        obs_df = obs_df.rename(columns={"salt": "obs_salinity"})
-        sim_variable_name = "S"
-        obs_variable_name = "obs_salinity"
-    else:
-        raise ValueError("target must be 'Temperature' or 'Salinity'.")
+
+    obs_df_temp = ds_target["temp"].to_dataframe().reset_index().dropna()
+    obs_df_temp = obs_df_temp.rename(columns={"temp": "obs_temperature"})
+    sim_variable_name_temp = "TEMP"
+    obs_variable_name_temp = "obs_temperature"
+
+    obs_df_salt = ds_target["salt"].to_dataframe().reset_index().dropna()
+    obs_df_salt = obs_df_salt.rename(columns={"salt": "obs_salinity"})
+    sim_variable_name_salt = "S"
+    obs_variable_name_salt = "obs_salinity"
+
+    # ensure target is a valid string
+    assert target.lower() in ["temperature", "salinity", "temperature_salinity",
+                              "salinity_temperature", "temp_salt", "salt_temp"], \
+        f"Target must be either 'Temperature', 'Salinity', 'Temperature_Salinity', 'Salinity_Temperature', 'Temp_Salt' or 'Salt_Temp'."
+
 
     composite_scores: dict[str, float] = {}
     param_ref_dic: dict[str, dict[str, float]] = {}
@@ -171,21 +175,33 @@ def score_temperature_salinity(target: str, parameter_list: list[str],
         if simulation_finished(log_files[i]):
 
             model_ds = model_xr[sim].isel(time=-1)
-            # Create simulation dataframe.
-            sim_df = model_ds[sim_variable_name].to_dataframe().reset_index().dropna()
-            sim_df = sim_df.rename(columns={sim_variable_name: f"sim_{target.lower()}", 'z_t': 'dep_t'})
 
-            # Use merge to join on common coordinates
-            merged = pd.merge(obs_df, sim_df[['dep_t','lat_t','lon_t', f"sim_{target.lower()}"]],
-                            on=['dep_t','lat_t','lon_t'], how='inner')
+            # Calculate the MAE for temperature
+            mae_temp = 0.0
+            mae_salt = 0.0
+            if 'temp' in target.lower():
+                sim_df = model_ds[sim_variable_name_temp].to_dataframe().reset_index().dropna()
+                sim_df = sim_df.rename(columns={sim_variable_name_temp: "sim_temperature", 'z_t': 'dep_t'})
 
-            # Compute the metrics
-            rmse = np.sqrt(((merged[f"sim_{target.lower()}"] - merged[obs_variable_name])**2).mean())
-            mae = (merged[f"sim_{target.lower()}"] - merged[obs_variable_name]).abs().mean()
-            corr = 1 - merged[f"sim_{target.lower()}"].corr( merged[obs_variable_name] )
+                # Use merge to join on common coordinates
+                merged = pd.merge(obs_df_temp, sim_df[['dep_t','lat_t','lon_t', "sim_temperature"]],
+                                on=['dep_t','lat_t','lon_t'], how='inner')
 
-            composite_scores[sim] = ( rmse + mae + corr ) / 3
-            composite_scores[sim] = mae
+                mae_temp = (merged["sim_temperature"] - merged[obs_variable_name_temp]).abs().mean()
+
+            # Calculate the MAE for salinity
+            if 'salt' in target.lower():
+                sim_df = model_ds[sim_variable_name_salt].to_dataframe().reset_index().dropna()
+                sim_df = sim_df.rename(columns={sim_variable_name_salt: "sim_salinity", 'z_t': 'dep_t'})
+
+                # Use merge to join on common coordinates
+                merged = pd.merge(obs_df_salt, sim_df[['dep_t','lat_t','lon_t', "sim_salinity"]],
+                                on=['dep_t','lat_t','lon_t'], how='inner')
+
+                mae_salt = (merged["sim_salinity"] - merged[obs_variable_name_salt]).abs().mean()
+
+            composite_scores[sim] = (mae_temp + mae_salt)/2
+
         else:
             # If the simulation is not finished, set the score to a large value
             composite_scores[sim] = 1e6
@@ -226,7 +242,8 @@ def calculate_score_df(target: str, parameter_list: list[str],
         param_df = score_isotope(parameter_list, model_xr, sims, validation_data_path,
                                  parameter_files, log_files)
 
-    elif target in ["Temperature", "Salinity"]:
+    elif target.lower() in ["temperature", "salinity", "temperature_salinity",
+                              "salinity_temperature", "temp_salt", "salt_temp"]:
         param_df = score_temperature_salinity(target, parameter_list, model_xr,
                                               sims, validation_data_path, parameter_files,
                                               log_files)

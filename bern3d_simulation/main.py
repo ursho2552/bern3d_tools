@@ -56,7 +56,7 @@ def main(config_file: str, initial_submission: bool, email: str) -> None:
 
     logging.info("(Re)starting the simulation...")
     sim_id = shared_utils.submit_job(my_config.bern3d_submit_script, my_config.simulation_name,
-                            new_path, my_config.time_bern3d, header_command=f"--mail-user=={email}")
+                            new_path, my_config.time_bern3d, header_command=f"--mail-user={email}")
 
     # Launch dependent job
     command_line_arguments = [my_config.config_file, "--restart", email]
@@ -64,7 +64,7 @@ def main(config_file: str, initial_submission: bool, email: str) -> None:
 
     shared_utils.submit_job(my_config.python_script, executable_name,
                    my_config.main_script, my_config.time_python,
-                   header_command=f"--mail-user=={email}",
+                   header_command=f"--mail-user={email}",
                    dependency=[sim_id], dependency_type='afterany',
                     command_line_arg = command_line_arguments)
 
