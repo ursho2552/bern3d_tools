@@ -59,7 +59,6 @@ def main(configuration_file, simulation_names) -> None:
                                                 simulation_dict = simulation_dictionary,
                                                 validation_data_path = my_config.validation_data_path,
                                                 parameter_file_template = my_config.parameter_file)
-
     if first_iteration:
         updated_df = new_df
     else:

@@ -330,12 +330,29 @@ def compute_and_tell_optimizer(optimizer: Optimizer, target: str,
     test_df = calculate_score_df(target, parameter_list, simulation_dict, simulation_names,
                                  validation_data_path, parameter_files, log_files)
 
-    test_df.replace(0,1e6,inplace=True)
-    test_df.replace(np.nan,1e6,inplace=True)
-    tested_parameters = test_df[parameter_list].values.tolist()
-    mae = test_df[f"mae_{target.lower()}"].values.tolist()
+    # Add a soft-penalty for failed simulations
+    mae_values = test_df[f"mae_{target.lower()}"].values
+    mae_values = np.where(mae_values == 1e6, np.nan, mae_values)
+    if sum(np.isnan(mae_values)) >= len(mae_values)-(len(mae_values)/2):
+        # If more than half of the simulations failed, set mean and std to 2.0
+        # This is a soft-penalty, so that the optimizer can still work with the data
+        # but it will not be able to find a good solution
+        logging.info("Most simulations failed. Setting mean and std to 2.0.")
+        mean_mae = 2.5
 
-    optimizer.tell(tested_parameters, mae)
+    else:
+        mean_mae = 2*np.nanmean(mae_values)
+
+
+    corrected_mae = np.where(test_df[f"mae_{target.lower()}"] == 1e6,
+                                                mean_mae,
+                                                test_df[f"mae_{target.lower()}"])
+
+    corrected_mae = corrected_mae.tolist()
+
+    tested_parameters = test_df[parameter_list].values.tolist()
+    #mae = test_df[f"mae_{target.lower()}"].values.tolist()
+    optimizer.tell(tested_parameters, corrected_mae)
     logging.info("Told new parameters to optimizer")
 
     # Correct indeces to match only simulation names

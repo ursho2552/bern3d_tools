@@ -64,7 +64,8 @@ def main(configuration_file: str, current_iteration: int, email: str) -> None:
                         acq_optimizer=my_config.acquisitition_optimizer,
                         n_jobs=my_config.job_number,
                         n_initial_points=n_initial_points,
-                        initial_point_generator=initial_point_generator)
+                        initial_point_generator=initial_point_generator,
+                        acq_func_kwargs={"weights": [0.3, 0.3, 0.4]}) #[EI, PI, LCB]
 
         if my_config.initialization_type == "simulation":
 
@@ -170,8 +171,6 @@ def main(configuration_file: str, current_iteration: int, email: str) -> None:
 # Main Function
 # ======================
 if __name__ in "__main__":
-
-    # python main.py --configuration_name /storage/homefs/uh24x373/bgc_bern/bern3d_tools/bayesian_optimization/bayesian_optimization/config_temperature.yaml --email urs.hofmannelizondo@unibe.ch
 
     # Parse command line arguments
     logging.basicConfig(level=logging.INFO)
