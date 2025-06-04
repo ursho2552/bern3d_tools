@@ -11,9 +11,9 @@ postprocessing_script: "/storage/homefs/uh24x373/bgc_bern/bayesian_optimization/
 optimizer_script: "/storage/homefs/uh24x373/bgc_bern/bayesian_optimization/runscripts/run_optimizer.sh"
 python_scripts: "/storage/homefs/uh24x373/bgc_bern/bayesian_optimization/"
 
-bern3d_script_time: "00:40:00"
-postprocessing_script_time: "00:20:00"
-optimizer_script_time: "00:10:00"
+bern3d_script_time: "06:00:00"
+postprocessing_script_time: "00:05:00"
+optimizer_script_time: "00:05:00"
 
 # Name of the simulation and type of data to use
 simulation_name_bern3d: "Bay_test"
@@ -26,6 +26,10 @@ work_directory: "/storage/scratch/users/uh24x373/Bayesian_optimizer_test/"
 output_files_bern3d: None
 output_dir_optimizer: None
 
+# Path to initialization in case of simulation initialization. In case of None, use !!python/none
+simulation_name_restart: !!python/none
+output_files_restart: !!python/none
+
 # For Bern3d-v3, the flag has to be set to False
 bern3d_f90: True
 template_name_bern3d: "RUNNAME"
@@ -37,6 +41,7 @@ validation_data_path: "/storage/research/climate_climtip/testorf/data/"
 
 # The number of iterations to run the Bayesian optimization algorithm
 max_iterations: 3
+target_amoc: 15.0
 
 # Path to file with parameters to be optimized
 # The path should contain a keyword {my_simulation} which will be replaced by the simulation name

@@ -14,6 +14,8 @@ if repo_root not in sys.path:
 
 import logging
 import argparse
+
+from pathlib import Path
 import spinup as sp
 
 import bern3d_tools.shared.utils as shared_utils
@@ -42,7 +44,7 @@ def main(configuration_file: str, email: str) -> None:
         spinup_executable_template = getattr(my_config, f"sbatch_script_phase{spinup_phase}")
 
         # Load the spinup configuration
-        parameter_file = f"{my_config.bern3d_template}/{my_config.bern3d_executable_name}.main.parameter"
+        parameter_file = f"{my_config.bern3d_template}/{Path(my_config.bern3d_executable_name).name}.main.parameter"
         spinup_config = sp.get_main_config_fields(parameter_file, sp.override_dictionary,
                                                   spinup_phase)
 

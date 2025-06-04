@@ -131,11 +131,13 @@ def score_isotope(isotope: str, parameter_list: list[str],
 
     return param_df
 
+
 def score_temperature_salinity(target: str, parameter_list: list[str],
                                model_xr: dict[str, xr.Dataset], sims: list[str],
                                validation_data_path: str,
                                parameter_files: list[str],
-                               log_files: list[str]) -> pd.DataFrame:
+                               log_files: list[str],
+                               target_amoc: float = None) -> pd.DataFrame:
 
     # The observations of temperature and salinity are already gridded on the model grid
     # and are stored in the run directory under the name world_68x46.observations.nc as the variable
@@ -170,15 +172,17 @@ def score_temperature_salinity(target: str, parameter_list: list[str],
     # Need to loop over the simulation names that have all, rahter than only those where it found a match in nc file
     # if sim is in the simulaiton names, get index --> i
     # else add a large value to the score, but still read in the paramters
+
     for i, sim in enumerate(sims):
         # Check if the simulation was successful
         if simulation_finished(log_files[i]):
-
-            model_ds = model_xr[sim].isel(time=-1)
-
-            # Calculate the MAE for temperature
             mae_temp = 0.0
             mae_salt = 0.0
+            mae_amoc = 0.0
+
+            model_ds = model_xr[sim].isel(time=-1)
+            div_mae = 0
+            # Calculate the MAE for temperature
             if 'temp' in target.lower():
                 sim_df = model_ds[sim_variable_name_temp].to_dataframe().reset_index().dropna()
                 sim_df = sim_df.rename(columns={sim_variable_name_temp: "sim_temperature", 'z_t': 'dep_t'})
@@ -187,7 +191,15 @@ def score_temperature_salinity(target: str, parameter_list: list[str],
                 merged = pd.merge(obs_df_temp, sim_df[['dep_t','lat_t','lon_t', "sim_temperature"]],
                                 on=['dep_t','lat_t','lon_t'], how='inner')
 
+                # Normalize the temperature values using the range of the observed values
+                obs_min = merged[obs_variable_name_temp].min()
+                obs_max = merged[obs_variable_name_temp].max()
+
+                merged["sim_temperature"] = (merged["sim_temperature"] - obs_min)/(obs_max - obs_min)
+                merged[obs_variable_name_temp] = (merged[obs_variable_name_temp] - obs_min)/(obs_max - obs_min)
+
                 mae_temp = (merged["sim_temperature"] - merged[obs_variable_name_temp]).abs().mean()
+                div_mae += 1
 
             # Calculate the MAE for salinity
             if 'salt' in target.lower():
@@ -198,9 +210,26 @@ def score_temperature_salinity(target: str, parameter_list: list[str],
                 merged = pd.merge(obs_df_salt, sim_df[['dep_t','lat_t','lon_t', "sim_salinity"]],
                                 on=['dep_t','lat_t','lon_t'], how='inner')
 
-                mae_salt = (merged["sim_salinity"] - merged[obs_variable_name_salt]).abs().mean()
+                # Normalize the temperature values using the range of the observed values
+                obs_min = merged[obs_variable_name_salt].min()
+                obs_max = merged[obs_variable_name_salt].max()
 
-            composite_scores[sim] = (mae_temp + mae_salt)/2
+                merged["sim_salinity"] = (merged["sim_salinity"] - obs_min)/(obs_max - obs_min)
+                merged[obs_variable_name_salt] = (merged[obs_variable_name_salt] - obs_min)/(obs_max - obs_min)
+
+                mae_salt = (merged["sim_salinity"] - merged[obs_variable_name_salt]).abs().mean()
+                div_mae += 1
+
+            # Calculate difference in AMOC strength
+            # sim is the .nc file Bay_wind_00_000.00001765_full_ave.nc for which we want to subsitute the _full_ave.nc for _timeseries_inst.nc
+            if target_amoc is not None:
+                amoc_sim = sim.replace("_full_ave.nc", "_timeseries_inst.nc")
+                ds_amoc = xr.open_dataset(amoc_sim, decode_times=False)
+                sim_amoc = ds_amoc['OPSIA_max'][-1].values
+                mae_amoc = abs(sim_amoc - target_amoc) if sim_amoc < target_amoc else 0.0
+                div_mae += 1
+
+            composite_scores[sim] = (mae_temp + mae_salt + mae_amoc)
 
         else:
             # If the simulation is not finished, set the score to a large value
@@ -221,7 +250,8 @@ def calculate_score_df(target: str, parameter_list: list[str],
                        model_xr: dict[str, xr.Dataset], sims: list[str],
                        validation_data_path: str,
                        parameter_files: list[str],
-                       log_files: list[str]) -> pd.DataFrame:
+                       log_files: list[str],
+                       target_amoc: float = None) -> pd.DataFrame:
     """
     Calculate the parameter dataframe for a given target and multiple simulations.
 
@@ -246,7 +276,7 @@ def calculate_score_df(target: str, parameter_list: list[str],
                               "salinity_temperature", "temp_salt", "salt_temp"]:
         param_df = score_temperature_salinity(target, parameter_list, model_xr,
                                               sims, validation_data_path, parameter_files,
-                                              log_files)
+                                              log_files, target_amoc)
     else:
         raise ValueError("Target must be either 'Pad', 'Thd', 'Temperature', or 'Salinity'.")
 
@@ -296,7 +326,8 @@ def compute_and_tell_optimizer(optimizer: Optimizer, target: str,
                                parameter_list: list[str],
                                simulation_dict: dict[str, xr.Dataset],
                                validation_data_path: str,
-                               parameter_file_template: str) -> tuple[pd.DataFrame, list]:
+                               parameter_file_template: str,
+                               target_amoc: float = None) -> tuple[pd.DataFrame, list]:
     """
     Compute the mean absolute error (MAE) and update the optimizer.
 
@@ -306,6 +337,8 @@ def compute_and_tell_optimizer(optimizer: Optimizer, target: str,
     parameter_list (list): List of parameters to calculate.
     simulation_dict (dict): Dictionary of simulation datasets.
     validation_data_path (str): Path to the validation data.
+    parameter_file_template (str): Template for the parameter file name.
+    target_amoc (float): Target AMOC value (optional).
 
     Returns:
     tuple: Dataframe with calculated parameters and score for all simulations and updated optimizer.
@@ -320,6 +353,7 @@ def compute_and_tell_optimizer(optimizer: Optimizer, target: str,
 
     parameter_files = []
     log_files = []
+    
     for sim in simulation_names:
         root_dir = Path(sim).parent.parent
         name_sim = Path(sim).name.split(".")[0]
@@ -328,17 +362,17 @@ def compute_and_tell_optimizer(optimizer: Optimizer, target: str,
         log_files.append(f"{root_dir}/run_{name_sim}/{name_sim}.out")
 
     test_df = calculate_score_df(target, parameter_list, simulation_dict, simulation_names,
-                                 validation_data_path, parameter_files, log_files)
+                                 validation_data_path, parameter_files, log_files, target_amoc)
 
     # Add a soft-penalty for failed simulations
     mae_values = test_df[f"mae_{target.lower()}"].values
     mae_values = np.where(mae_values == 1e6, np.nan, mae_values)
-    if sum(np.isnan(mae_values)) >= len(mae_values)-(len(mae_values)/2):
-        # If more than half of the simulations failed, set mean and std to 2.0
+    if sum(np.isnan(mae_values)) == len(mae_values):
+        # If more than half of the simulations failed, set mean and std to 2.5
         # This is a soft-penalty, so that the optimizer can still work with the data
         # but it will not be able to find a good solution
-        logging.info("Most simulations failed. Setting mean and std to 2.0.")
-        mean_mae = 2.5
+        logging.info("Most simulations failed. Setting mean to 2.5.")
+        mean_mae = 2.0
 
     else:
         mean_mae = 2*np.nanmean(mae_values)

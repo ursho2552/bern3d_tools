@@ -1,10 +1,10 @@
 # Path to the script template
-bern3d_template: "../../bern3d_f90/input"
+bern3d_template: "/storage/homefs/uh24x373/bgc_bern/optimize_wind_velocity/spinup/bern3d_f90/run"
 # Should contain the name of the executable and the path to the executable
-bern3d_executable_name: "../../bern3d_f90/run/RUNNAME"
+bern3d_executable_name: "/storage/homefs/uh24x373/bgc_bern/optimize_wind_velocity/spinup/bern3d_f90/run/RUNNAME"
 
 # Path to the work directory
-work_directory: "../../bern3d_f90/results/"
+work_directory: "/storage/homefs/uh24x373/bgc_bern/optimize_wind_velocity/spinup/bern3d_f90/results/"
 # Path of the sbatch script
 sbatch_script_phase1: "runscripts/run_bern3d_f90_phase1.sh"
 sbatch_script_phase2: "runscripts/run_bern3d_f90_phase2.sh"

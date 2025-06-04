@@ -77,12 +77,17 @@ class ConfigParameters:
     bern3d_template: str
     initialization_file: str
 
+    simulation_name_restart: str
+    output_files_restart: str
+
     # Path where you want to store the output of the optimizer
     validation_data_path: str
     output_dir_optimizer: str
 
     # The number of iterations to run the Bayesian optimization algorithm
     max_iterations: int
+
+    target_amoc: float
 
     parameter_mapping: dict[str, float]
     parameter_bounds: dict[str, tuple[float, float]]

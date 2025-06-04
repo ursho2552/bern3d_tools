@@ -15,7 +15,7 @@ override_dictionary = {
         't00': 1765,
         'lin_name': "Spinup1.00001765",
         'lin_nr': 0,
-        'lin_continue': True,
+        'lin_continue': False,
         'rundesc': "Spinup Phase 1",
         'atmTSres': True
     },

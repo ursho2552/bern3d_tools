@@ -33,14 +33,11 @@ def main(configuration_file, simulation_names) -> None:
     my_config = shared_utils.read_config_file(configuration_file, bo.ConfigParameters)
     my_config = bo.check_configuration(my_config)
 
-    print(my_config.output_dir_optimizer)
-
     # Load the parameter iteration and optimizer
     # Check if the file exists
     first_iteration = False
     if not os.path.exists(f"{my_config.output_dir_optimizer}/{my_config.isotope}_df.csv"):
         first_iteration = True
-
 
     with open(f"{my_config.output_dir_optimizer}/optimizer.pkl",'rb') as my_optimizer_file:
         my_optimizer = pickle.load(my_optimizer_file)
@@ -58,7 +55,9 @@ def main(configuration_file, simulation_names) -> None:
                                                 parameter_list = parameter_list,
                                                 simulation_dict = simulation_dictionary,
                                                 validation_data_path = my_config.validation_data_path,
-                                                parameter_file_template = my_config.parameter_file)
+                                                parameter_file_template = my_config.parameter_file,
+                                                target_amoc = my_config.target_amoc)
+
     if first_iteration:
         updated_df = new_df
     else:
@@ -73,13 +72,13 @@ def main(configuration_file, simulation_names) -> None:
     with open(f"{my_config.output_dir_optimizer}/optimizer.pkl",'wb') as my_optimizer_file:
         pickle.dump(my_optimizer, my_optimizer_file)
 
-
 # ======================
 # Main Function
 # ======================
 if __name__ in "__main__":
 
     # Parse command line arguments
+    # python postprocessing.py --configuration_name bayesian_optimization/config_temperature.yaml --simulation_name Bay_wind_00_000,Bay_wind_01_000,Bay_wind_02_000,Bay_wind_03_000,Bay_wind_04_000
     logging.basicConfig(level=logging.INFO)
     parser = argparse.ArgumentParser(description='Postprocessing for Bayesian optimization module')
     parser.add_argument('--configuration_name', required=True, type=str,

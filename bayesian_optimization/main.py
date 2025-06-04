@@ -16,6 +16,7 @@ import argparse
 import logging
 import pickle
 
+import numpy as np
 from skopt import Optimizer
 import bayesian_optimization as bo
 import bern3d_tools.shared.utils as shared_utils
@@ -43,7 +44,7 @@ def main(configuration_file: str, current_iteration: int, email: str) -> None:
 
             logging.info("Initialize with a simulation")
             n_initial_points = 1
-            initial_point_generator = "random"
+            initial_point_generator = "lhs"
             simulation_initialization = True
             wildcard = my_config.wildcard_simulation
 
@@ -64,13 +65,12 @@ def main(configuration_file: str, current_iteration: int, email: str) -> None:
                         acq_optimizer=my_config.acquisitition_optimizer,
                         n_jobs=my_config.job_number,
                         n_initial_points=n_initial_points,
-                        initial_point_generator=initial_point_generator,
-                        acq_func_kwargs={"weights": [0.3, 0.3, 0.4]}) #[EI, PI, LCB]
+                        initial_point_generator=initial_point_generator)
 
         if my_config.initialization_type == "simulation":
 
-            simulation_dictionary = bo.access_file(model_output_files = my_config.output_files_bern3d,
-                                             simulation_name = my_config.simulation_name_bern3d,
+            simulation_dictionary = bo.access_file(model_output_files = my_config.output_files_restart,
+                                             simulation_name = my_config.simulation_name_restart,
                                              output_type = my_config.output_type_bern3d,
                                              output_timescale = my_config.output_timescale_bern3d,
                                              simulation_initialization = simulation_initialization,
@@ -172,6 +172,7 @@ def main(configuration_file: str, current_iteration: int, email: str) -> None:
 # ======================
 if __name__ in "__main__":
 
+    # python main.py --configuration_name bayesian_optimization/config_simulation.yaml
     # Parse command line arguments
     logging.basicConfig(level=logging.INFO)
     parser = argparse.ArgumentParser(description='Run bayesian optimization')
@@ -188,5 +189,6 @@ if __name__ in "__main__":
     if command_line_args.email is None:
         command_line_args.email = shared_utils.get_user_email()
 
+    np.random.seed(command_line_args.current_iteration)
     main(command_line_args.configuration_name, command_line_args.current_iteration,
          command_line_args.email)

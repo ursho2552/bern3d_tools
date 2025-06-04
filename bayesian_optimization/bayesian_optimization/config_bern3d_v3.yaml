@@ -26,6 +26,10 @@ work_directory: "/storage/scratch/users/uh24x373/Bayesian_optimizer_V3/"
 output_files_bern3d: None
 output_dir_optimizer: None
 
+# Path to initialization in case of simulation initialization. In case of None, use !!python/none
+simulation_name_restart: !!python/none
+output_files_restart: !!python/none
+
 # For Bern3d-v3, the flag has to be set to False
 bern3d_f90: False
 template_name_bern3d: "t2config__"
@@ -37,6 +41,7 @@ validation_data_path: "/storage/research/climate_climtip/testorf/data/"
 
 # The number of iterations to run the Bayesian optimization algorithm
 max_iterations: 2
+target_amoc: 15.0
 
 # Path to file with parameters to be optimized
 # The path should contain a keyword {my_simulation} which will be replaced by the simulation name
