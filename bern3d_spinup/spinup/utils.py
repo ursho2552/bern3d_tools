@@ -228,6 +228,7 @@ def create_spinup_run_directory(bern3d_template_path: str, bern3d_executable_pat
         new_file_name = file.name.replace(bern3d_template_name, new_name_executable)
         file.rename(new_simulation_path / new_file_name)
         logging.info("Renamed: %s -> %s", file, new_simulation_path / new_file_name)
+        
 
     return new_simulation_path
 

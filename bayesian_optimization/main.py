@@ -83,9 +83,10 @@ def main(configuration_file: str, current_iteration: int, email: str) -> None:
                                                                      parameter_list = parameter_list,
                                                                      simulation_dict = simulation_dictionary,
                                                                      validation_data_path = my_config.validation_data_path,
-                                                                     parameter_file_template = my_config.parameter_file)
+                                                                     parameter_file_template = my_config.parameter_file,
+                                                                     target_amoc = my_config.target_amoc)
 
-            initial_df.to_csv(f"{my_config.output_dir_optimizer}/{my_config.isotope}_df.csv")
+            initial_df.to_csv(f"{my_config.output_dir_optimizer}/{my_config.isotope}_df_simulations.csv")
 
     else:
         logging.info("Loading the optimizer from the previous iteration")
@@ -95,7 +96,19 @@ def main(configuration_file: str, current_iteration: int, email: str) -> None:
     #######################################
     ### Ask for next parameters to test ###
     #######################################
-    next_parameters = my_optimizer.ask(n_points=my_config.batchsize)
+    # Vary the number of points to test based on the current iteration and error relative to the
+    # first error (if available)
+    if not 'first_error' in  dir(my_optimizer):
+        logging.info("Asking for initial parameters to test")
+        num_points = my_config.batchsize
+        my_optimizer.stable_iterations = 0
+        my_optimizer.max_stable_iterations = my_config.max_stable_iterations
+    else:
+        logging.info("Asking for next parameters to test in iteration %d", current_iteration)
+        num_points = my_config.batchsize*(my_optimizer.get_result().fun/my_optimizer.first_error)
+        num_points = max(int(num_points), 2)
+
+    next_parameters = my_optimizer.ask(n_points=num_points)
     # Save the optimizer
     with open(f"{my_config.output_dir_optimizer}/optimizer.pkl", 'wb') as my_optimizer_file:
         pickle.dump(my_optimizer, my_optimizer_file)
@@ -152,9 +165,12 @@ def main(configuration_file: str, current_iteration: int, email: str) -> None:
     # call optimizer script for the next iteration
     current_iteration += 1
     command_line_arg = [my_config.config_file_path, str(current_iteration), email]
-    if current_iteration > my_config.max_iterations:
-        logging.info("Maximum number of iterations reached for the Bayesian optimization")
-    else:
+
+    optimization_done = bo.check_optimization_status(my_optimizer, current_iteration,
+                                                     my_config.max_iterations)
+
+    if not optimization_done:
+        # Call optimizer script for the next iteration
         logging.info("Calling the optimizer for the next iteration: %d", current_iteration)
         # Create and run dependent sbatch simulation for post-processing
         executable_name = f"{my_config.python_scripts}/main.py"
@@ -166,13 +182,12 @@ def main(configuration_file: str, current_iteration: int, email: str) -> None:
                                             dependency=[postprocessing_job_id],
                                             command_line_arg=command_line_arg)
 
-
 # ======================
 # Main Function
 # ======================
 if __name__ in "__main__":
 
-    # python main.py --configuration_name bayesian_optimization/config_simulation.yaml
+    # python main.py --configuration_name bayesian_optimization/config_temperature.yaml
     # Parse command line arguments
     logging.basicConfig(level=logging.INFO)
     parser = argparse.ArgumentParser(description='Run bayesian optimization')

@@ -5,7 +5,6 @@ These are the utility functions used to run the model with possible restart.
 """
 import logging
 import shutil
-import subprocess
 from pathlib import Path
 from dataclasses import dataclass
 from typing import Optional, TypeVar
@@ -54,7 +53,9 @@ def check_configuration(config_dataclass: JobConfig) -> JobConfig:
     assert Path(config_dataclass.bern3d_template).exists(), f"Template path {config_dataclass.bern3d_template} does not exist."
 
     # Check if the work directory exists
-    assert Path(config_dataclass.work_directory).exists(), f"Work directory {config_dataclass.work_directory} does not exist."
+    if not Path(config_dataclass.work_directory).exists():
+        logging.info(f"Work directory {config_dataclass.work_directory} does not exist. Creating it.")
+        Path(config_dataclass.work_directory).mkdir(parents=True, exist_ok=True)
 
     # Check if the executable name is valid
     assert config_dataclass.bern3d_executable_name, "Executable name cannot be empty."

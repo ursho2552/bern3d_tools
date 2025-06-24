@@ -86,6 +86,7 @@ class ConfigParameters:
 
     # The number of iterations to run the Bayesian optimization algorithm
     max_iterations: int
+    max_stable_iterations: int
 
     target_amoc: float
 

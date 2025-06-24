@@ -145,7 +145,7 @@ def score_temperature_salinity(target: str, parameter_list: list[str],
     # directly compared to the observations.
 
     # Open the NetCDF observations file and convert target variable to DataFrame
-    target_file = f"{validation_data_path}/world_68x46.observations.nc"
+    target_file = f"{validation_data_path}/world_68x46.observations_ida.nc"
     assert os.path.exists(target_file), f"{target_file} file does not exist."
 
     ds_target = xr.open_dataset(target_file)
@@ -160,18 +160,19 @@ def score_temperature_salinity(target: str, parameter_list: list[str],
     sim_variable_name_salt = "S"
     obs_variable_name_salt = "obs_salinity"
 
+    obs_df_ida = ds_target["ida"].to_dataframe().reset_index().dropna()
+    obs_df_ida = obs_df_ida.rename(columns={"ida": "obs_ida"})
+    sim_variable_name_ida = "ida"
+    obs_variable_name_ida = "obs_ida"
+
     # ensure target is a valid string
+    # Can have temp, salt, ida, amoc
     assert target.lower() in ["temperature", "salinity", "temperature_salinity",
                               "salinity_temperature", "temp_salt", "salt_temp"], \
         f"Target must be either 'Temperature', 'Salinity', 'Temperature_Salinity', 'Salinity_Temperature', 'Temp_Salt' or 'Salt_Temp'."
 
-
     composite_scores: dict[str, float] = {}
     param_ref_dic: dict[str, dict[str, float]] = {}
-
-    # Need to loop over the simulation names that have all, rahter than only those where it found a match in nc file
-    # if sim is in the simulaiton names, get index --> i
-    # else add a large value to the score, but still read in the paramters
 
     for i, sim in enumerate(sims):
         # Check if the simulation was successful
@@ -179,9 +180,9 @@ def score_temperature_salinity(target: str, parameter_list: list[str],
             mae_temp = 0.0
             mae_salt = 0.0
             mae_amoc = 0.0
+            mae_ida = 0.0
 
             model_ds = model_xr[sim].isel(time=-1)
-            div_mae = 0
             # Calculate the MAE for temperature
             if 'temp' in target.lower():
                 sim_df = model_ds[sim_variable_name_temp].to_dataframe().reset_index().dropna()
@@ -199,7 +200,6 @@ def score_temperature_salinity(target: str, parameter_list: list[str],
                 merged[obs_variable_name_temp] = (merged[obs_variable_name_temp] - obs_min)/(obs_max - obs_min)
 
                 mae_temp = (merged["sim_temperature"] - merged[obs_variable_name_temp]).abs().mean()
-                div_mae += 1
 
             # Calculate the MAE for salinity
             if 'salt' in target.lower():
@@ -218,18 +218,36 @@ def score_temperature_salinity(target: str, parameter_list: list[str],
                 merged[obs_variable_name_salt] = (merged[obs_variable_name_salt] - obs_min)/(obs_max - obs_min)
 
                 mae_salt = (merged["sim_salinity"] - merged[obs_variable_name_salt]).abs().mean()
-                div_mae += 1
+
+            # Calcualte difference in ideal age
+            # ideal age is stored in the model output as ida and in the observations_ida.nc file as "ida"
+            sim_df = model_ds[sim_variable_name_ida].to_dataframe().reset_index().dropna()
+            sim_df = sim_df.rename(columns={sim_variable_name_ida: "sim_ida", 'z_t': 'dep_t'})
+
+            # Use merge to join on common coordinates
+            merged = pd.merge(obs_df_ida, sim_df[['dep_t','lat_t','lon_t', "sim_ida"]],
+                            on=['dep_t','lat_t','lon_t'], how='inner')
+
+            # Normalize the temperature values using the range of the observed values
+            obs_min = merged[obs_variable_name_ida].min()
+            obs_max = merged[obs_variable_name_ida].max()
+
+            merged["sim_ida"] = (merged["sim_ida"] - obs_min)/(obs_max - obs_min)
+            merged[obs_variable_name_ida] = (merged[obs_variable_name_ida] - obs_min)/(obs_max - obs_min)
+
+            mae_ida = (merged["sim_ida"] - merged[obs_variable_name_ida]).abs().mean()
 
             # Calculate difference in AMOC strength
-            # sim is the .nc file Bay_wind_00_000.00001765_full_ave.nc for which we want to subsitute the _full_ave.nc for _timeseries_inst.nc
-            if target_amoc is not None:
-                amoc_sim = sim.replace("_full_ave.nc", "_timeseries_inst.nc")
-                ds_amoc = xr.open_dataset(amoc_sim, decode_times=False)
-                sim_amoc = ds_amoc['OPSIA_max'][-1].values
-                mae_amoc = abs(sim_amoc - target_amoc) if sim_amoc < target_amoc else 0.0
-                div_mae += 1
+            # sim is the .nc file Bay_wind_00_000.00001765_full_ave.nc for which we want to subsitute the _full_ave.nc for _timeseries_ave.nc
+            if target_amoc is None:
+                target_amoc = 15.0
 
-            composite_scores[sim] = (mae_temp + mae_salt + mae_amoc)
+            amoc_sim = sim.replace("_full_ave.nc", "_timeseries_ave.nc")
+            ds_amoc = xr.open_dataset(amoc_sim, decode_times=False)
+            sim_amoc = ds_amoc['OPSIA_max'][-1].values
+            mae_amoc = abs(sim_amoc - target_amoc)/target_amoc if sim_amoc < target_amoc else 0.0
+
+            composite_scores[sim] = (mae_temp + mae_salt + mae_amoc + mae_ida)
 
         else:
             # If the simulation is not finished, set the score to a large value
@@ -281,6 +299,39 @@ def calculate_score_df(target: str, parameter_list: list[str],
         raise ValueError("Target must be either 'Pad', 'Thd', 'Temperature', or 'Salinity'.")
 
     return param_df
+
+def correct_failed_simulations(optimizer: Optimizer, df: pd.DataFrame,
+                               target: str, standard_penalty: float = 4.0) -> list[float]:
+    """
+    Correct the target values in the dataframe for failed simulations.
+    If a simulation failed, it is assigned a penalty value.
+
+    Parameters:
+    optimizer (Optimizer): Optimizer instance.
+    df (pd.DataFrame): Dataframe containing the target values.
+    target (str): Target type.
+    standard_penalty (float): Standard penalty value for failed simulations (Default is 4.0)
+    Returns:
+    list: List of corrected target values.
+    """
+
+    # Get penalty for failed simulations
+    penalty = np.nan
+    try:
+        error_values = optimizer.get_result().fun
+        if len(error_values) >= optimizer.get_result().specs['args']['n_initial_points']:
+            penalty = 2*np.mean(error_values)
+    except ValueError:
+        # If the optimizer has not been run yet, set a default penalty
+        penalty = standard_penalty
+
+    # Add a soft-penalty for failed simulations
+    target_values = df[f"mae_{target.lower()}"].values
+
+    corrected_target = np.where(target_values == 1e6, penalty, target_values)
+
+    return corrected_target.tolist()
+
 
 def get_config_value(path: str, param: str):
     """
@@ -353,7 +404,7 @@ def compute_and_tell_optimizer(optimizer: Optimizer, target: str,
 
     parameter_files = []
     log_files = []
-    
+
     for sim in simulation_names:
         root_dir = Path(sim).parent.parent
         name_sim = Path(sim).name.split(".")[0]
@@ -361,31 +412,14 @@ def compute_and_tell_optimizer(optimizer: Optimizer, target: str,
         parameter_files.append(f"{root_dir}/run_{name_sim}/{name_param}")
         log_files.append(f"{root_dir}/run_{name_sim}/{name_sim}.out")
 
+
     test_df = calculate_score_df(target, parameter_list, simulation_dict, simulation_names,
                                  validation_data_path, parameter_files, log_files, target_amoc)
 
-    # Add a soft-penalty for failed simulations
-    mae_values = test_df[f"mae_{target.lower()}"].values
-    mae_values = np.where(mae_values == 1e6, np.nan, mae_values)
-    if sum(np.isnan(mae_values)) == len(mae_values):
-        # If more than half of the simulations failed, set mean and std to 2.5
-        # This is a soft-penalty, so that the optimizer can still work with the data
-        # but it will not be able to find a good solution
-        logging.info("Most simulations failed. Setting mean to 2.5.")
-        mean_mae = 2.0
-
-    else:
-        mean_mae = 2*np.nanmean(mae_values)
-
-
-    corrected_mae = np.where(test_df[f"mae_{target.lower()}"] == 1e6,
-                                                mean_mae,
-                                                test_df[f"mae_{target.lower()}"])
-
-    corrected_mae = corrected_mae.tolist()
+    # Add penalty to failed simulations
+    corrected_mae = correct_failed_simulations(optimizer, test_df, target)
 
     tested_parameters = test_df[parameter_list].values.tolist()
-    #mae = test_df[f"mae_{target.lower()}"].values.tolist()
     optimizer.tell(tested_parameters, corrected_mae)
     logging.info("Told new parameters to optimizer")
 
@@ -397,3 +431,26 @@ def compute_and_tell_optimizer(optimizer: Optimizer, target: str,
     test_df.index = corrected_index
 
     return test_df, optimizer
+
+def check_optimization_status(optimizer: Optimizer, iteration: int,
+                              max_iteration: int = 10, threshold: float = 0.05) -> bool:
+
+    optimization_done = False
+    # Check if the maximum number of iterations has been reached
+    if iteration > max_iteration:
+        logging.info("Maximum number of iterations reached for the Bayesian optimization")
+        optimization_done = True
+
+    # Check if the error has been reduced by more than 95% compared to the first error
+    if iteration > 1:
+        if optimizer.get_result().fun <= optimizer.first_error*threshold:
+            logging.info("Error reduced by more than 95%%, stopping the optimization")
+            optimization_done = True
+    # Check if the error has been reduced by more than 95% compared to the first error
+
+    # Check if the optimizer has improved in the last max_stable_iterations
+    if optimizer.stable_iterations >= optimizer.max_stable_iterations:
+        logging.info("Maximum number of stable iterations reached, stopping the optimization")
+        optimization_done = True
+
+    return optimization_done
