@@ -60,7 +60,7 @@ def main(configuration_file, simulation_names) -> None:
 
     if first_iteration:
         updated_df = new_df
-        my_optimizer.first_error = my_optimizer.get_results().fun
+        my_optimizer.first_error = my_optimizer.get_result().fun
         my_optimizer.last_error = my_optimizer.first_error
     else:
         # Load the existing dataframe
