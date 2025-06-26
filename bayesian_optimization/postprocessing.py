@@ -62,6 +62,7 @@ def main(configuration_file, simulation_names) -> None:
         updated_df = new_df
         my_optimizer.first_error = my_optimizer.get_result().fun
         my_optimizer.last_error = my_optimizer.first_error
+        my_optimizer.stable_iterations = 0
     else:
         # Load the existing dataframe
         current_df = pd.read_csv(f"{my_config.output_dir_optimizer}/{my_config.isotope}_df.csv",
@@ -87,7 +88,7 @@ def main(configuration_file, simulation_names) -> None:
 if __name__ in "__main__":
 
     # Parse command line arguments
-    # python postprocessing.py --configuration_name bayesian_optimization/config_simulation.yaml --simulation_name Bay_wind_00_000,Bay_wind_01_000,Bay_wind_02_000,Bay_wind_03_000,Bay_wind_04_000
+    # python postprocessing.py --configuration_name bayesian_optimization/config_temperature.yaml --simulation_name Bay_wind_00_000,Bay_wind_01_000,Bay_wind_02_000,Bay_wind_03_000,Bay_wind_04_000,Bay_wind_05_000,Bay_wind_06_000,Bay_wind_07_000,Bay_wind_08_000,Bay_wind_09_000,Bay_wind_10_000,Bay_wind_11_000,Bay_wind_12_000,Bay_wind_13_000,Bay_wind_14_000,Bay_wind_15_000,Bay_wind_16_000,Bay_wind_17_000,Bay_wind_18_000,Bay_wind_19_000,Bay_wind_20_000,Bay_wind_21_000,Bay_wind_22_000,Bay_wind_23_000,Bay_wind_24_000,Bay_wind_25_000,Bay_wind_26_000,Bay_wind_27_000,Bay_wind_28_000,Bay_wind_29_000
     logging.basicConfig(level=logging.INFO)
     parser = argparse.ArgumentParser(description='Postprocessing for Bayesian optimization module')
     parser.add_argument('--configuration_name', required=True, type=str,

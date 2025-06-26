@@ -42,6 +42,25 @@ def find_nearest(array: npt.ArrayLike, value: float,
 
     return array[idx]
 
+def nrmse(predictions: npt.ArrayLike, targets: npt.ArrayLike) -> float:
+    """
+    Calculate the Normalized Root Mean Square Error (NRMSE) between predictions and targets.
+
+    Parameters:
+    predictions (np.array): Predicted values.
+    targets (np.array): Target values.
+
+    Returns:
+    float: NRMSE value.
+    """
+    assert len(predictions) == len(targets), "Predictions and targets must have the same length."
+    assert not np.isnan(predictions).any(), "Predictions must not contain NaN values."
+    assert not np.isnan(targets).any(), "Targets must not contain NaN values."
+
+    mse = np.mean((predictions - targets) ** 2)
+    nrmse_value = np.sqrt(mse) / (targets.max() - targets.min())
+    return nrmse_value
+
 def score_isotope(isotope: str, parameter_list: list[str],
                   model_xr: dict[str, xr.Dataset], sims: list[str],
                   validation_data_path: str,
@@ -177,10 +196,10 @@ def score_temperature_salinity(target: str, parameter_list: list[str],
     for i, sim in enumerate(sims):
         # Check if the simulation was successful
         if simulation_finished(log_files[i]):
-            mae_temp = 0.0
-            mae_salt = 0.0
-            mae_amoc = 0.0
-            mae_ida = 0.0
+            error_temp = 0.0
+            error_salt = 0.0
+            error_amoc = 0.0
+            error_ida = 0.0
 
             model_ds = model_xr[sim].isel(time=-1)
             # Calculate the MAE for temperature
@@ -192,14 +211,7 @@ def score_temperature_salinity(target: str, parameter_list: list[str],
                 merged = pd.merge(obs_df_temp, sim_df[['dep_t','lat_t','lon_t', "sim_temperature"]],
                                 on=['dep_t','lat_t','lon_t'], how='inner')
 
-                # Normalize the temperature values using the range of the observed values
-                obs_min = merged[obs_variable_name_temp].min()
-                obs_max = merged[obs_variable_name_temp].max()
-
-                merged["sim_temperature"] = (merged["sim_temperature"] - obs_min)/(obs_max - obs_min)
-                merged[obs_variable_name_temp] = (merged[obs_variable_name_temp] - obs_min)/(obs_max - obs_min)
-
-                mae_temp = (merged["sim_temperature"] - merged[obs_variable_name_temp]).abs().mean()
+                error_temp = nrmse(merged["sim_temperature"], merged[obs_variable_name_temp])
 
             # Calculate the MAE for salinity
             if 'salt' in target.lower():
@@ -209,15 +221,7 @@ def score_temperature_salinity(target: str, parameter_list: list[str],
                 # Use merge to join on common coordinates
                 merged = pd.merge(obs_df_salt, sim_df[['dep_t','lat_t','lon_t', "sim_salinity"]],
                                 on=['dep_t','lat_t','lon_t'], how='inner')
-
-                # Normalize the temperature values using the range of the observed values
-                obs_min = merged[obs_variable_name_salt].min()
-                obs_max = merged[obs_variable_name_salt].max()
-
-                merged["sim_salinity"] = (merged["sim_salinity"] - obs_min)/(obs_max - obs_min)
-                merged[obs_variable_name_salt] = (merged[obs_variable_name_salt] - obs_min)/(obs_max - obs_min)
-
-                mae_salt = (merged["sim_salinity"] - merged[obs_variable_name_salt]).abs().mean()
+                error_salt = nrmse(merged["sim_salinity"], merged[obs_variable_name_salt])
 
             # Calcualte difference in ideal age
             # ideal age is stored in the model output as ida and in the observations_ida.nc file as "ida"
@@ -227,15 +231,7 @@ def score_temperature_salinity(target: str, parameter_list: list[str],
             # Use merge to join on common coordinates
             merged = pd.merge(obs_df_ida, sim_df[['dep_t','lat_t','lon_t', "sim_ida"]],
                             on=['dep_t','lat_t','lon_t'], how='inner')
-
-            # Normalize the temperature values using the range of the observed values
-            obs_min = merged[obs_variable_name_ida].min()
-            obs_max = merged[obs_variable_name_ida].max()
-
-            merged["sim_ida"] = (merged["sim_ida"] - obs_min)/(obs_max - obs_min)
-            merged[obs_variable_name_ida] = (merged[obs_variable_name_ida] - obs_min)/(obs_max - obs_min)
-
-            mae_ida = (merged["sim_ida"] - merged[obs_variable_name_ida]).abs().mean()
+            error_ida = nrmse(merged["sim_ida"], merged[obs_variable_name_ida])
 
             # Calculate difference in AMOC strength
             # sim is the .nc file Bay_wind_00_000.00001765_full_ave.nc for which we want to subsitute the _full_ave.nc for _timeseries_ave.nc
@@ -245,9 +241,9 @@ def score_temperature_salinity(target: str, parameter_list: list[str],
             amoc_sim = sim.replace("_full_ave.nc", "_timeseries_ave.nc")
             ds_amoc = xr.open_dataset(amoc_sim, decode_times=False)
             sim_amoc = ds_amoc['OPSIA_max'][-1].values
-            mae_amoc = abs(sim_amoc - target_amoc)/target_amoc if sim_amoc < target_amoc else 0.0
+            error_amoc = abs(sim_amoc - target_amoc)/target_amoc if sim_amoc < target_amoc else 0.0
 
-            composite_scores[sim] = (mae_temp + mae_salt + mae_amoc + mae_ida)
+            composite_scores[sim] = (error_temp + error_salt + error_amoc + error_ida)
 
         else:
             # If the simulation is not finished, set the score to a large value
@@ -301,7 +297,7 @@ def calculate_score_df(target: str, parameter_list: list[str],
     return param_df
 
 def correct_failed_simulations(optimizer: Optimizer, df: pd.DataFrame,
-                               target: str, standard_penalty: float = 4.0) -> list[float]:
+                               target: str, standard_penalty: float = 2.0) -> list[float]:
     """
     Correct the target values in the dataframe for failed simulations.
     If a simulation failed, it is assigned a penalty value.
@@ -317,18 +313,19 @@ def correct_failed_simulations(optimizer: Optimizer, df: pd.DataFrame,
 
     # Get penalty for failed simulations
     penalty = np.nan
+    target_values = df[f"mae_{target.lower()}"].values
+    target_values[target_values == 1e6] = np.nan
+
     try:
-        error_values = optimizer.get_result().fun
+        error_values = optimizer.get_result().func_vals
         if len(error_values) >= optimizer.get_result().specs['args']['n_initial_points']:
-            penalty = 2*np.mean(error_values)
+            penalty = standard_penalty*np.mean(error_values)
     except ValueError:
-        # If the optimizer has not been run yet, set a default penalty
-        penalty = standard_penalty
+        # If the optimizer has not been run yet, use the values that are already in the dataframe
+        penalty = standard_penalty*np.nanmean(target_values)
 
     # Add a soft-penalty for failed simulations
-    target_values = df[f"mae_{target.lower()}"].values
-
-    corrected_target = np.where(target_values == 1e6, penalty, target_values)
+    corrected_target = np.where(np.isnan(target_values), penalty, target_values)
 
     return corrected_target.tolist()
 
