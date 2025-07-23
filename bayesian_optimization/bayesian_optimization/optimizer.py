@@ -42,7 +42,8 @@ def find_nearest(array: npt.ArrayLike, value: float,
 
     return array[idx]
 
-def nrmse(predictions: npt.ArrayLike, targets: npt.ArrayLike) -> float:
+def nrmse(predictions: npt.ArrayLike, targets: npt.ArrayLike,
+          weights: npt.ArrayLike = None) -> float:
     """
     Calculate the Normalized Root Mean Square Error (NRMSE) between predictions and targets.
 
@@ -54,11 +55,11 @@ def nrmse(predictions: npt.ArrayLike, targets: npt.ArrayLike) -> float:
     float: NRMSE value.
     """
     assert len(predictions) == len(targets), "Predictions and targets must have the same length."
-    assert not np.isnan(predictions).any(), "Predictions must not contain NaN values."
-    assert not np.isnan(targets).any(), "Targets must not contain NaN values."
+    weights = 1 if weights is None else weights
 
-    mse = np.mean((predictions - targets) ** 2)
-    nrmse_value = np.sqrt(mse) / (targets.max() - targets.min())
+    mse = np.nanmean(weights*(predictions - targets) ** 2)
+    nrmse_value = np.sqrt(mse) / (np.nanmax(targets) - np.nanmin(targets))
+
     return nrmse_value
 
 def score_isotope(isotope: str, parameter_list: list[str],
@@ -169,20 +170,14 @@ def score_temperature_salinity(target: str, parameter_list: list[str],
 
     ds_target = xr.open_dataset(target_file)
 
-    obs_df_temp = ds_target["temp"].to_dataframe().reset_index().dropna()
-    obs_df_temp = obs_df_temp.rename(columns={"temp": "obs_temperature"})
+    obs_df_temp = ds_target["temp"].values
     sim_variable_name_temp = "TEMP"
-    obs_variable_name_temp = "obs_temperature"
 
-    obs_df_salt = ds_target["salt"].to_dataframe().reset_index().dropna()
-    obs_df_salt = obs_df_salt.rename(columns={"salt": "obs_salinity"})
+    obs_df_salt = ds_target["salt"].values
     sim_variable_name_salt = "S"
-    obs_variable_name_salt = "obs_salinity"
 
-    obs_df_ida = ds_target["ida"].to_dataframe().reset_index().dropna()
-    obs_df_ida = obs_df_ida.rename(columns={"ida": "obs_ida"})
+    obs_df_ida = ds_target["ida"].values
     sim_variable_name_ida = "ida"
-    obs_variable_name_ida = "obs_ida"
 
     # ensure target is a valid string
     # Can have temp, salt, ida, amoc
@@ -195,6 +190,7 @@ def score_temperature_salinity(target: str, parameter_list: list[str],
 
     for i, sim in enumerate(sims):
         # Check if the simulation was successful
+
         if simulation_finished(log_files[i]):
             error_temp = 0.0
             error_salt = 0.0
@@ -202,48 +198,62 @@ def score_temperature_salinity(target: str, parameter_list: list[str],
             error_ida = 0.0
 
             model_ds = model_xr[sim].isel(time=-1)
+
+            # Get weights for the model grid
+            cell_volume = model_ds.boxvol.values
+            mask_atl = model_ds.masks.values == 1
+            mask_pac = model_ds.masks.values == 3
+            # Calculate the volume of the Atlantic and Pacific Ocean
+            vol_atl = np.nansum(cell_volume[mask_atl])
+            vol_pac = np.nansum(cell_volume[mask_pac])
+
+            # Schrink Pacific to match Atlantic; Atlantic = 1; others = 1
+            scale = np.ones_like(cell_volume)
+            scale[mask_pac] = vol_atl / vol_pac
+            scale[mask_atl] = 1.0
+
+            # incorporate physical volume
+            raw_w = scale * cell_volume
+            weight = raw_w / np.nansum(raw_w)
+
+            # volume =  model_ds.boxvol
+            # weight_1 = (volume/volume.sum()).values
+
             # Calculate the MAE for temperature
             if 'temp' in target.lower():
-                sim_df = model_ds[sim_variable_name_temp].to_dataframe().reset_index().dropna()
-                sim_df = sim_df.rename(columns={sim_variable_name_temp: "sim_temperature", 'z_t': 'dep_t'})
-
-                # Use merge to join on common coordinates
-                merged = pd.merge(obs_df_temp, sim_df[['dep_t','lat_t','lon_t', "sim_temperature"]],
-                                on=['dep_t','lat_t','lon_t'], how='inner')
-
-                error_temp = nrmse(merged["sim_temperature"], merged[obs_variable_name_temp])
+                sim_df = model_ds[sim_variable_name_temp].values
+                error_temp = nrmse(sim_df, obs_df_temp, weight)
 
             # Calculate the MAE for salinity
             if 'salt' in target.lower():
-                sim_df = model_ds[sim_variable_name_salt].to_dataframe().reset_index().dropna()
-                sim_df = sim_df.rename(columns={sim_variable_name_salt: "sim_salinity", 'z_t': 'dep_t'})
-
-                # Use merge to join on common coordinates
-                merged = pd.merge(obs_df_salt, sim_df[['dep_t','lat_t','lon_t', "sim_salinity"]],
-                                on=['dep_t','lat_t','lon_t'], how='inner')
-                error_salt = nrmse(merged["sim_salinity"], merged[obs_variable_name_salt])
+                sim_df = model_ds[sim_variable_name_salt].values
+                error_salt = nrmse(sim_df, obs_df_salt, weight)
 
             # Calcualte difference in ideal age
             # ideal age is stored in the model output as ida and in the observations_ida.nc file as "ida"
-            sim_df = model_ds[sim_variable_name_ida].to_dataframe().reset_index().dropna()
-            sim_df = sim_df.rename(columns={sim_variable_name_ida: "sim_ida", 'z_t': 'dep_t'})
-
-            # Use merge to join on common coordinates
-            merged = pd.merge(obs_df_ida, sim_df[['dep_t','lat_t','lon_t', "sim_ida"]],
-                            on=['dep_t','lat_t','lon_t'], how='inner')
-            error_ida = nrmse(merged["sim_ida"], merged[obs_variable_name_ida])
+            sim_df = model_ds[sim_variable_name_ida].values
+            error_ida = nrmse(sim_df, obs_df_ida, weight)
 
             # Calculate difference in AMOC strength
             # sim is the .nc file Bay_wind_00_000.00001765_full_ave.nc for which we want to subsitute the _full_ave.nc for _timeseries_ave.nc
             if target_amoc is None:
-                target_amoc = 15.0
+                target_amoc = 15.5
+
+            target_amoc_min = target_amoc - 0.5
+            target_amoc_max = target_amoc + 0.5
 
             amoc_sim = sim.replace("_full_ave.nc", "_timeseries_ave.nc")
             ds_amoc = xr.open_dataset(amoc_sim, decode_times=False)
             sim_amoc = ds_amoc['OPSIA_max'][-1].values
-            error_amoc = abs(sim_amoc - target_amoc)/target_amoc if sim_amoc < target_amoc else 0.0
+            error_amoc = 1 + (abs(sim_amoc - target_amoc)/target_amoc if sim_amoc < target_amoc_min or sim_amoc > target_amoc_max else 0.0)
 
-            composite_scores[sim] = (error_temp + error_salt + error_amoc + error_ida)
+            total_error = error_amoc*(error_temp + error_salt  + error_ida)
+            if total_error > 10:
+                total_error = 1e6
+            elif total_error < 0:
+                total_error = 1e6
+
+            composite_scores[sim] = total_error
 
         else:
             # If the simulation is not finished, set the score to a large value
@@ -441,7 +451,7 @@ def check_optimization_status(optimizer: Optimizer, iteration: int,
     # Check if the error has been reduced by more than 95% compared to the first error
     if iteration > 1:
         if optimizer.get_result().fun <= optimizer.first_error*threshold:
-            logging.info("Error reduced by more than 95%%, stopping the optimization")
+            logging.info("Error reduced by more than 95%, stopping the optimization")
             optimization_done = True
     # Check if the error has been reduced by more than 95% compared to the first error
 
