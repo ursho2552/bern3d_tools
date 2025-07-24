@@ -16,7 +16,7 @@ parameter_list: >
 relative_change: 0.25
 
 # Work directory
-work_directory: "/storage/scratch/users/uh24x373/sensitivity_Fe/"
+work_directory: "/storage/scratch/users/uh24x373/sensitivity_Fe_V2/"
 # Path to the sbatch script
 sensitivity_script: "runscripts/run_bern3d_f90_sequential.sh"
 # Time

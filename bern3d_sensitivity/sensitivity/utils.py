@@ -180,8 +180,10 @@ def copy_template_files(exec_name: str, new_name: str,
             continue
         name = file.name
 
-        # Skip Slurm logs
+        # Skip Slurm logs, shell scripts, and output files
         if name.startswith("slurm") and name.endswith(".out"):
+            continue
+        if name.endswith(".sh") or name.endswith(".out"):
             continue
 
         # Skip files belonging to other executables
@@ -215,18 +217,17 @@ def copy_template_files(exec_name: str, new_name: str,
             print(f"Replaced '{exec_name}' with '{new_name}' in: {file_path.name}")
 
 def setup_run_directory(template_dir: str, executable_name: str,
-                        new_name: str,
-                        work_dir: str, restart_files: str,
-                        parameter: dict[str, Union[int, float]]) -> str:
+                        new_name: str, work_dir: str,
+                        restart_files: str) -> str:
     """
     Set up the run directory for the sensitivity analysis.
 
     Parameters:
     template_dir (str): Path to the template directory.
     executable_name (str): Name of the executable.
+    new_name (str): New name for the executable.
     work_dir (str): Path to the working directory.
-    parameter (str): Parameter to change.
-    config_dict (dict): Configuration dictionary.
+    restart_files (str): Path to the restart files.
 
     Returns:
     str: Path to the run directory.

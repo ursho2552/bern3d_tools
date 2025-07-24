@@ -36,9 +36,11 @@ def main(configureation_file: str, email: str, analyze_runs: bool = False) -> No
         # For each parameter create a new parameter file and executable
         model_jobs = []
         parameter_list = [param.strip() for param in my_config.parameter_list.split(",")]
+        parameter_list.insert(0, None)  # Add the prefix to the parameter names
         for parameter in parameter_list:
 
-            for i in range(2):
+            iterations = 1 if parameter is None else 2
+            for i in range(iterations):
                 # Define the new name for the executable
                 # First a decrease in parameter value
                 factor = 1 + my_config.relative_change
@@ -46,36 +48,38 @@ def main(configureation_file: str, email: str, analyze_runs: bool = False) -> No
                     factor = 1 - my_config.relative_change
 
                 new_name = f"Low_{parameter}" if i == 0 else f"High_{parameter}"
-
+                if parameter is None:
+                    new_name = "Reference"
+                    factor = 1.0
                 # Copy the template executable and parameter file
                 run_directory = sa.setup_run_directory(template_dir=my_config.bern3d_template,
                                                 executable_name=my_config.bern3d_executable_name,
                                                 new_name=new_name,
                                                 work_dir=my_config.work_directory,
-                                                restart_files=my_config.bern3d_restart_files,
-                                                    parameter={parameter: factor})
+                                                restart_files=my_config.bern3d_restart_files)
 
-                # Update the parameter file with the new parameter value
-                # get current parameter values
-                param_file = f"{run_directory}/{new_name}{my_config.bern3d_parameter_file}"
-                parameter_dict = sa.parse_to_dict(file_path=param_file)
+                if parameter is not None:
+                    # Update the parameter file with the new parameter value
+                    # get current parameter values
+                    param_file = f"{run_directory}/{new_name}{my_config.bern3d_parameter_file}"
+                    parameter_dict = sa.parse_to_dict(file_path=param_file)
 
-                # Adapt value
-                parameter_dict = sa.adapt_dictionary(config_dict=parameter_dict,
-                                                parameter=parameter,
-                                                factor=factor)
-                # Create new parameter file
-                new_param_file = sa.create_new_parameter_file(config_dict=parameter_dict,
-                                                        parameter_file_name=param_file)
+                    # Adapt value
+                    parameter_dict = sa.adapt_dictionary(config_dict=parameter_dict,
+                                                    parameter=parameter,
+                                                    factor=factor)
+                    # Create new parameter file
+                    new_param_file = sa.create_new_parameter_file(config_dict=parameter_dict,
+                                                            parameter_file_name=param_file)
 
                 # Submit the job
-                model_job_id = shared_utils.submit_job(script_template=my_config.sensitivity_script,
-                                                    executable_name=new_name,
-                                                    executable_path=run_directory,
-                                                    time=my_config.time,
-                                                    header_command=f"--mail-user={email}"
-                                                    )
-                model_jobs.append(model_job_id)
+                # model_job_id = shared_utils.submit_job(script_template=my_config.sensitivity_script,
+                #                                     executable_name=new_name,
+                #                                     executable_path=run_directory,
+                #                                     time=my_config.time,
+                #                                     header_command=f"--mail-user={email}"
+                #                                     )
+                # model_jobs.append(model_job_id)
 
     else:
         # Analyze the runs
