@@ -15,9 +15,16 @@ parameter_list: >
 # Relative change to standard (e.g. 25% increase and decrease is given as 0.25)
 relative_change: 0.25
 
+# Target field
+target_field:
+   Fe: ".00001765_full_ave.nc"
+
 # Work directory
 work_directory: "/storage/scratch/users/uh24x373/sensitivity_Fe_V2/"
 # Path to the sbatch script
-sensitivity_script: "runscripts/run_bern3d_f90_sequential.sh"
+bern3d_run_script: "/storage/homefs/uh24x373/bgc_bern/bern3d_tools/bern3d_sensitivity/runscripts/run_bern3d_f90_sequential.sh"
+evaluation_script: "/storage/homefs/uh24x373/bgc_bern/bern3d_tools/bern3d_sensitivity/runscripts/run_evaluation.sh"
+main_script_path: "/storage/homefs/uh24x373/bgc_bern/bern3d_tools/bern3d_sensitivity/"
 # Time
-time: "10:00:00"
+time_bern3d: "10:00:00"
+time_evaluation: "01:00:00"

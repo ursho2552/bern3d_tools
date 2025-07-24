@@ -18,15 +18,24 @@ class ConfigParameters:
     """
     Configuration parameters for the sensitivity analysis.
     """
+    # Bern3D files
     bern3d_template: str
     bern3d_executable_name: str
     bern3d_parameter_file: str
     bern3d_restart_files: str
+
+    # Sensitivity analysis parameters
     parameter_list: str
     relative_change: float
+    target_field: dict[str, str]
+
+    # Work directory and scripts to use
     work_directory: str
-    sensitivity_script: str
-    time: str
+    bern3d_run_script: str
+    evaluation_script: str
+    main_script_path: str
+    time_bern3d: str
+    time_evaluation: str
 
 def check_configuration(config: ConfigParameters) -> ConfigParameters:
     """
@@ -42,13 +51,18 @@ def check_configuration(config: ConfigParameters) -> ConfigParameters:
     assert os.path.exists(f"{config.bern3d_template}/{config.bern3d_executable_name}"), "BERN3D executable does not exist."
     param_file = f"{config.bern3d_template}/{config.bern3d_executable_name}{config.bern3d_parameter_file}"
     assert os.path.exists(param_file), "BERN3D parameter file does not exist."
-    if config.sensitivity_script:
+    assert os.path.exists(config.bern3d_run_script), "BERN3D run script does not exist."
+    assert os.path.exists(config.evaluation_script), "Evaluation script does not exist."
+
+    if config.bern3d_restart_files:
         restart_files = glob.glob(config.bern3d_restart_files)
         assert restart_files, f"No restart files found matching pattern: {config.bern3d_restart_files}"
     assert config.relative_change > 0, "Relative change must be greater than zero."
 
-    assert config.time.count(":") == 2, "Time format must be HH:MM:SS."
-    assert int(config.time.split(":")[0]) < 96, "Time in hours must be less than 96."
+    assert config.time_bern3d.count(":") == 2, "Time format must be HH:MM:SS."
+    assert int(config.time_bern3d.split(":")[0]) < 96, "Time in hours must be less than 96."
+    assert config.time_evaluation.count(":") == 2, "Time format must be HH:MM:SS."
+    assert int(config.time_evaluation.split(":")[0]) < 96, "Time in hours must be less than 96."
     # Check if the work directory exists, if not create it
     if not os.path.exists(config.work_directory):
         os.makedirs(config.work_directory)
@@ -122,7 +136,8 @@ def adapt_dictionary(config_dict: dict[str, Union[str, int, float]],
     original_value = config_dict[parameter]
     if isinstance(original_value, (int, float)):
         if original_value == 0:
-            raise ValueError(f"Parameter '{parameter}' cannot be zero for relative change.")
+            logging.warning(f"Parameter '{parameter}' cannot be zero for relative change.")
+            return config_dict
 
         config_dict[parameter] = factor*original_value
 
@@ -202,7 +217,7 @@ def copy_template_files(exec_name: str, new_name: str,
             dest = work_dir / new_filename
             shutil.copy2(file, dest)
             copied_files.append(dest)
-            print(f"Copied: {name} -> {new_filename}")
+            logging.warning(f"Copied: {name} -> {new_filename}")
 
     # Replacement within text files
     for file_path in copied_files:
@@ -214,7 +229,7 @@ def copy_template_files(exec_name: str, new_name: str,
         if exec_name in text:
             new_text = text.replace(exec_name, new_name)
             file_path.write_text(new_text)
-            print(f"Replaced '{exec_name}' with '{new_name}' in: {file_path.name}")
+            logging.warning(f"Replaced '{exec_name}' with '{new_name}' in: {file_path.name}")
 
 def setup_run_directory(template_dir: str, executable_name: str,
                         new_name: str, work_dir: str,

@@ -17,7 +17,7 @@ import pathlib as Path
 import sensitivity as sa
 import bern3d_tools.shared.utils as shared_utils
 
-def main(configureation_file: str, email: str, analyze_runs: bool = False) -> None:
+def main(configuration_file: str, email: str, analyze_runs: bool = False) -> None:
     """
     Main function to run the sensitivity analysis.
 
@@ -29,14 +29,15 @@ def main(configureation_file: str, email: str, analyze_runs: bool = False) -> No
     None
     """
     # Load configuration
-    my_config = shared_utils.read_config_file(configureation_file, sa.ConfigParameters)
+    my_config = shared_utils.read_config_file(configuration_file, sa.ConfigParameters)
     my_config = sa.check_configuration(my_config)
+
+    parameter_list = [param.strip() for param in my_config.parameter_list.split(",")]
+    parameter_list.insert(0, None)
 
     if not analyze_runs:
         # For each parameter create a new parameter file and executable
         model_jobs = []
-        parameter_list = [param.strip() for param in my_config.parameter_list.split(",")]
-        parameter_list.insert(0, None)  # Add the prefix to the parameter names
         for parameter in parameter_list:
 
             iterations = 1 if parameter is None else 2
@@ -73,21 +74,37 @@ def main(configureation_file: str, email: str, analyze_runs: bool = False) -> No
                                                             parameter_file_name=param_file)
 
                 # Submit the job
-                model_job_id = shared_utils.submit_job(script_template=my_config.sensitivity_script,
+                model_job_id = shared_utils.submit_job(script_template=my_config.bern3d_run_script,
                                                     executable_name=new_name,
                                                     executable_path=run_directory,
-                                                    time=my_config.time,
+                                                    time=my_config.time_bern3d,
                                                     header_command=f"--mail-user={email}"
                                                     )
                 model_jobs.append(model_job_id)
+        # Launch dependent job for evaluation
+
+        command_line_arg = [configuration_file]
+
+        executable_name = f"{my_config.main_script_path}/main.py"
+        postprocessing_job_id = shared_utils.submit_job(script_template=my_config.evaluation_script,
+                                            executable_name=executable_name,
+                                            executable_path=my_config.work_directory,
+                                            time=my_config.time_evaluation,
+                                            header_command=f"--mail-user={email}",
+                                            dependency=model_jobs,
+                                            dependency_type="afterany",
+                                            command_line_arg=command_line_arg)
+
 
     else:
-        # Analyze the runs
-        # This part would typically involve checking the results of the runs,
-        # comparing them, and possibly generating some output files or reports.
-        # For now, we will just print a message indicating that analysis is being performed.
-        print("Analyzing runs... (This part is not implemented yet)")
+        logging.info("Analyzing runs...")
+        # Analyze results
+        results_df = sa.analyze_sensitivity_results(my_config, parameter_list)
 
+        # Save results
+        sa.save_sensitivity_summary(results_df, my_config.work_directory)
+
+        logging.info("Sensitivity analysis complete!")
 
 if __name__ == "__main__":
     # Usage:
