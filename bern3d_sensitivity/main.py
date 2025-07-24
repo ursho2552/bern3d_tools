@@ -73,13 +73,13 @@ def main(configureation_file: str, email: str, analyze_runs: bool = False) -> No
                                                             parameter_file_name=param_file)
 
                 # Submit the job
-                # model_job_id = shared_utils.submit_job(script_template=my_config.sensitivity_script,
-                #                                     executable_name=new_name,
-                #                                     executable_path=run_directory,
-                #                                     time=my_config.time,
-                #                                     header_command=f"--mail-user={email}"
-                #                                     )
-                # model_jobs.append(model_job_id)
+                model_job_id = shared_utils.submit_job(script_template=my_config.sensitivity_script,
+                                                    executable_name=new_name,
+                                                    executable_path=run_directory,
+                                                    time=my_config.time,
+                                                    header_command=f"--mail-user={email}"
+                                                    )
+                model_jobs.append(model_job_id)
 
     else:
         # Analyze the runs
