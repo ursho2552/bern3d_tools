@@ -10,7 +10,7 @@ bern3d_restart_files: "/storage/homefs/uh24x373/bgc_bern/debug_Bern3D/bern3d_f90
 parameter_list: >
   ligtot, ligstab, freefemax, kscavcons, fesed, sedlim, fesol,
   ffedust, ffehydro, LigMin, ligREM, ligDOC, fefrac, fesedmax,
-  febucketinit, FeSigPOC, FeSigIno, FeSigAuth, bgceuscav,
+  febucketinit, FeSigPOC, FeSigIno, FeSigAuth,
   bgcaggpar, coxf
 # Relative change to standard (e.g. 25% increase and decrease is given as 0.25)
 relative_change: 0.25

@@ -86,11 +86,20 @@ def main(configureation_file: str, email: str, analyze_runs: bool = False) -> No
 
 
 if __name__ == "__main__":
+    # Usage:
+    # python main.py --configuration_name config_files/sensitivity_setup.yaml
+
     parser = argparse.ArgumentParser(description="Run sensitivity analysis for BERN3D model.")
-    parser.add_argument("--configuration_name", type=str, help="Path to the configuration file.")
-    parser.add_argument("--email", type=str, help="Email address for notifications.")
-    parser.add_argument("--analyze_runs", action='store_true', help="Flag to analyze runs instead of creating new ones.")
+    parser.add_argument("--configuration_name", required=True,
+                        type=str, help="Path to the configuration file.")
+    parser.add_argument("--email", required=False, type=str,
+                        help="Email address for notifications.")
+    parser.add_argument("--analyze_runs", required=False,
+                        action='store_true',
+                        help="Flag to analyze runs instead of creating new ones.")
     args = parser.parse_args()
 
-    # Call the main function with parsed arguments
+    if args.email is None:
+        args.email = shared_utils.get_user_email()
+
     main(args.configuration_name, args.email, args.analyze_runs)

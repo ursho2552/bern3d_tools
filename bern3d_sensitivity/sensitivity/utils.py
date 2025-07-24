@@ -42,7 +42,9 @@ def check_configuration(config: ConfigParameters) -> ConfigParameters:
     assert os.path.exists(f"{config.bern3d_template}/{config.bern3d_executable_name}"), "BERN3D executable does not exist."
     param_file = f"{config.bern3d_template}/{config.bern3d_executable_name}{config.bern3d_parameter_file}"
     assert os.path.exists(param_file), "BERN3D parameter file does not exist."
-    #assert os.path.exists(config.sensitivity_script), "Sensitivity analysis script does not exist."
+    if config.sensitivity_script:
+        restart_files = glob.glob(config.bern3d_restart_files)
+        assert restart_files, f"No restart files found matching pattern: {config.bern3d_restart_files}"
     assert config.relative_change > 0, "Relative change must be greater than zero."
 
     assert config.time.count(":") == 2, "Time format must be HH:MM:SS."
