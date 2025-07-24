@@ -7,12 +7,12 @@ import xarray as xr
 import numpy as np
 import pandas as pd
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import TypeVar
 
 ConfigFile = TypeVar('ConfigFile')
 
 def analyze_sensitivity_results(config: ConfigFile,
-                                parameter_list: List[str]) -> pd.DataFrame:
+                                parameter_list: list[str]) -> pd.DataFrame:
     """
     Analyze sensitivity results by comparing model outputs to reference run.
 
@@ -104,7 +104,7 @@ def analyze_sensitivity_results(config: ConfigFile,
     return pd.DataFrame(results)
 
 def calculate_sensitivity_metrics(var_data: xr.DataArray, ref_data: xr.DataArray,
-                                parameter: str, variation: str, variable: str) -> Dict:
+                                parameter: str, variation: str, variable: str) -> dict:
     """
     Calculate sensitivity metrics between variable data and reference.
 

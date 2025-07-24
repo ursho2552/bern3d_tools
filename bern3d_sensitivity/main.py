@@ -83,7 +83,7 @@ def main(configuration_file: str, email: str, analyze_runs: bool = False) -> Non
                 model_jobs.append(model_job_id)
         # Launch dependent job for evaluation
 
-        command_line_arg = [configuration_file]
+        command_line_arg = [f"{my_config.main_script_path}/{configuration_file}"]
 
         executable_name = f"{my_config.main_script_path}/main.py"
         postprocessing_job_id = shared_utils.submit_job(script_template=my_config.evaluation_script,
