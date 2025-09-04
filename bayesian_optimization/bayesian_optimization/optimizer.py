@@ -156,13 +156,16 @@ def score_temperature_salinity(target: str, parameter_list: list[str],
                                model_xr: dict[str, xr.Dataset], sims: list[str],
                                validation_data_path: str,
                                parameter_files: list[str],
-                               log_files: list[str],
-                               target_amoc: float = None) -> pd.DataFrame:
+                               log_files: list[str], **kwargs: float) -> pd.DataFrame:
+
 
     # The observations of temperature and salinity are already gridded on the model grid
     # and are stored in the run directory under the name world_68x46.observations.nc as the variable
     # "temp" and "salt" with dimensions (dept_t, lat_t, lon_t). Hence, the model output, can be
     # directly compared to the observations.
+
+    # get target values from kwargs
+    target_amoc = kwargs.get('target_amoc', None)
 
     # Open the NetCDF observations file and convert target variable to DataFrame
     target_file = f"{validation_data_path}/world_68x46.observations_ida.nc"
@@ -270,12 +273,141 @@ def score_temperature_salinity(target: str, parameter_list: list[str],
 
     return param_df
 
+def score_npzd(target: str, parameter_list: list[str], model_xr: dict[str, xr.Dataset],
+               sims: list[str], validation_data_path: str, parameter_files: list[str],
+               log_files: list[str], **kwargs: float) -> pd.DataFrame:
+
+    # get target values from kwargs
+    target_poc = kwargs.get('target_poc', None)
+    target_caco3 = kwargs.get('target_caco3', None)
+    target_opal = kwargs.get('target_opal', None)
+    target_npp = kwargs.get('target_npp', None)
+
+    # Here, we score the NPZD model output against observed DIC, PO4, NO3, and the overall NPP and
+    # POC, opal, and CaCO3 export at 120 m depth.
+
+    # Open the NetCDF observations file and convert target variable to DataFrame
+    target_file = f"{validation_data_path}/world_68x46.observations.nc"
+    assert os.path.exists(target_file), f"{target_file} file does not exist."
+
+    ds_target = xr.open_dataset(target_file)
+
+    obs_df_dic = ds_target["dic"].values
+    sim_variable_name_dic = "dic"
+
+    obs_df_alk = ds_target["alk"].values
+    sim_variable_name_alk = "alk"
+
+    obs_df_po4 = ds_target["po4"].values
+    sim_variable_name_po4 = "po4"
+
+    obs_df_sio = ds_target["sio"].values
+    sim_variable_name_sio = "sio"
+
+    # Can have dic, alk, po4, poc, caco3, opal, npp
+    composite_scores: dict[str, float] = {}
+    param_ref_dic: dict[str, dict[str, float]] = {}
+
+    for i, sim in enumerate(sims):
+        # Check if the simulation was successful
+
+        if simulation_finished(log_files[i]):
+            error_dic = 0.0
+            error_alk = 0.0
+            error_po4 = 0.0
+            error_sio = 0.0
+            error_poc = 0.0
+            error_caco3 = 0.0
+            error_opal = 0.0
+            error_npp = 0.0
+
+            model_ds = model_xr[sim].isel(time=-1)
+
+            # Get weights for the model grid
+            area = model_ds.area.values
+
+            # Calculate the MAE for temperature
+            if 'dic' in target.lower():
+                sim_df = model_ds[sim_variable_name_dic].values
+                error_dic = nrmse(sim_df, obs_df_dic, 1)
+            if 'alk' in target.lower():
+                sim_df = model_ds[sim_variable_name_alk].values
+                error_alk = nrmse(sim_df, obs_df_alk, 1)
+            if 'po4' in target.lower():
+                sim_df = model_ds[sim_variable_name_po4].values
+                error_po4 = nrmse(sim_df, obs_df_po4, 1)
+            if 'sio' in target.lower():
+                sim_df = model_ds[sim_variable_name_sio].values
+                error_sio = nrmse(sim_df, obs_df_sio, 1)
+
+            # Calculate difference in export value, pools, and NPP
+            if target_poc is None:
+                target_poc = 9.7
+            target_poc_min = target_poc - 0.25
+            target_poc_max = target_poc + 0.25
+
+            if target_caco3 is None:
+                target_caco3 = 1.9
+            target_caco3_min = target_caco3 - 0.3
+            target_caco3_max = target_caco3 + 0.3
+
+            if target_opal is None:
+                target_opal = 190
+            target_opal_min = target_opal - 52
+            target_opal_max = target_opal + 52
+
+            if target_npp is None:
+                target_npp = 60
+            target_npp_min = target_npp - 17
+            target_npp_max = target_npp + 17
+
+            # Should all be in the same file as the previous
+            factor_C = 12.01  # g C per mol C
+            nsecyr = 365*24*60*60  # seconds per year
+            if 'npp' in target.lower():
+                # Get the NPP and multiply with area 12.01 and nsecyr to get total NPP
+                sim_df = np.nansum(model_ds["NPZD_NPP"][-1].values*area*factor_C*nsecyr)/1e15  # in Pg C yr-1
+                error_npp = (abs(sim_df - target_npp)/target_npp if sim_df < target_npp_min or sim_df > target_npp_max else 0.0)
+            if 'poc' in target.lower():
+                sim_df = np.nansum(model_ds["EXPORT_POM"][-1].values*area*factor_C*nsecyr)/1e15  # in Pg C yr-1
+                error_poc = (abs(sim_df - target_poc)/target_poc if sim_df < target_poc_min or sim_df > target_poc_max else 0.0)
+            if 'caco3' in target.lower():
+                sim_df = np.nansum(model_ds["EXPORT_CACO3"][-1].values*area*factor_C*nsecyr)/1e15 # in Pg C yr-1
+                error_caco3 = (abs(sim_df - target_caco3)/target_caco3 if sim_df < target_caco3_min or sim_df > target_caco3_max else 0.0)
+            if 'opal' in target.lower():
+                sim_df = np.nansum(model_ds["EXPORT_OPAL"][-1].values*area*nsecyr)/1e12 # in Tmol Si yr-1
+                error_opal = (abs(sim_df - target_opal)/target_opal if sim_df < target_opal_min or sim_df > target_opal_max else 0.0)
+
+            bulk_errors = 1 + error_npp + error_poc + error_caco3 + error_opal
+
+            total_error = bulk_errors*(error_dic + error_alk  + error_po4 + error_sio)
+            print(f"Total error is {total_error}")
+            print (f"error_dic: {error_dic}, error_alk: {error_alk}, error_po4: {error_po4}, error_sio: {error_sio}")
+            print (f"error_npp: {error_npp}, error_poc: {error_poc}, error_caco3: {error_caco3}, error_opal: {error_opal}")
+
+            composite_scores[sim] = total_error
+
+        else:
+            # If the simulation is not finished, set the score to a large value
+            composite_scores[sim] = 1e6
+            logging.info(f"Simulation {sim} not finished. Setting score to 1e6.")
+
+        param_ref_dic[sim] = {}
+        for param in parameter_list:
+            param_ref_dic[sim][param] = get_config_value(parameter_files[i], param)
+
+    mae_df = pd.DataFrame({target: composite_scores})
+    param_df = pd.DataFrame.from_dict(param_ref_dic, orient="index")
+    param_df[f"mae_{target.lower()}"] = param_df.index.map(mae_df[target])
+
+    return param_df
+
 def calculate_score_df(target: str, parameter_list: list[str],
                        model_xr: dict[str, xr.Dataset], sims: list[str],
                        validation_data_path: str,
                        parameter_files: list[str],
                        log_files: list[str],
-                       target_amoc: float = None) -> pd.DataFrame:
+                       **kwargs: float) -> pd.DataFrame:
     """
     Calculate the parameter dataframe for a given target and multiple simulations.
 
@@ -296,11 +428,16 @@ def calculate_score_df(target: str, parameter_list: list[str],
         param_df = score_isotope(parameter_list, model_xr, sims, validation_data_path,
                                  parameter_files, log_files)
 
-    elif target.lower() in ["temperature", "salinity", "temperature_salinity",
-                              "salinity_temperature", "temp_salt", "salt_temp"]:
+    elif any(t in target.lower() for t in ["temp", "salt"]):
         param_df = score_temperature_salinity(target, parameter_list, model_xr,
                                               sims, validation_data_path, parameter_files,
-                                              log_files, target_amoc)
+                                              log_files, **kwargs)
+
+    # but it might be a combination of many targets with dic, alk, po4, sio, poc, caco3, opal, npp
+    elif any(t in target.lower() for t in ["dic", "alk", "po4", "sio", "poc", "caco3", "opal", "npp"]):
+        param_df = score_npzd(target, parameter_list, model_xr,
+                              sims, validation_data_path, parameter_files,
+                              log_files, **kwargs)
     else:
         raise ValueError("Target must be either 'Pad', 'Thd', 'Temperature', or 'Salinity'.")
 
@@ -385,7 +522,7 @@ def compute_and_tell_optimizer(optimizer: Optimizer, target: str,
                                simulation_dict: dict[str, xr.Dataset],
                                validation_data_path: str,
                                parameter_file_template: str,
-                               target_amoc: float = None) -> tuple[pd.DataFrame, list]:
+                               **kwargs: float) -> tuple[pd.DataFrame, list]:
     """
     Compute the mean absolute error (MAE) and update the optimizer.
 
@@ -415,13 +552,13 @@ def compute_and_tell_optimizer(optimizer: Optimizer, target: str,
     for sim in simulation_names:
         root_dir = Path(sim).parent.parent
         name_sim = Path(sim).name.split(".")[0]
-        name_param = parameter_file_template.format(simulation_name_bern3d=name_sim)
+        name_param = f"{name_sim}{parameter_file_template}"
         parameter_files.append(f"{root_dir}/run_{name_sim}/{name_param}")
         log_files.append(f"{root_dir}/run_{name_sim}/{name_sim}.out")
 
 
     test_df = calculate_score_df(target, parameter_list, simulation_dict, simulation_names,
-                                 validation_data_path, parameter_files, log_files, target_amoc)
+                                 validation_data_path, parameter_files, log_files, **kwargs)
 
     # Add penalty to failed simulations
     corrected_mae = correct_failed_simulations(optimizer, test_df, target)

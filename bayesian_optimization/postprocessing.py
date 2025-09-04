@@ -49,14 +49,14 @@ def main(configuration_file, simulation_names) -> None:
                                     output_type = my_config.output_type_bern3d,
                                     output_timescale = my_config.output_timescale_bern3d)
 
-    parameter_list = list(my_config.parameter_mapping.keys())
+    parameter_list = list(my_config.parameter_bounds.keys())
     new_df, my_optimizer = bo.compute_and_tell_optimizer(optimizer = my_optimizer,
                                                 target = my_config.isotope,
                                                 parameter_list = parameter_list,
                                                 simulation_dict = simulation_dictionary,
                                                 validation_data_path = my_config.validation_data_path,
-                                                parameter_file_template = my_config.parameter_file,
-                                                target_amoc = my_config.target_amoc)
+                                                parameter_file_template = my_config.bern3d_parameter_file,
+                                                **my_config.target_values)
 
     if first_iteration:
         updated_df = new_df

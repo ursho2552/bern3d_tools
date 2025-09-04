@@ -4,6 +4,7 @@
 These are the utility functions used in the Bayesian optimization module.
 """
 import os
+import re
 import glob
 import shutil
 import logging
@@ -73,7 +74,7 @@ class ConfigParameters:
     work_directory: str
     output_files_bern3d: str
     bern3d_f90: bool
-    template_name_bern3d: str
+    bern3d_executable_name: str
     bern3d_template: str
     initialization_file: str
 
@@ -88,13 +89,13 @@ class ConfigParameters:
     max_iterations: int
     max_stable_iterations: int
 
-    target_amoc: float
+    target_values: dict[str, Optional[float]]
 
-    parameter_mapping: dict[str, float]
     parameter_bounds: dict[str, tuple[float, float]]
 
     # Path to file with parameters to be optimized
-    parameter_file: str
+    bern3d_parameter_file: str
+    bern3d_restart_files: str
 
     initialization_type: str
     isotope: str
@@ -127,8 +128,6 @@ def check_configuration(config_dataclass: ConfigParameters) -> ConfigParameters:
 
     assert config_dataclass.output_type_bern3d in ["timeseries", "full"], "Output type not found"
     assert config_dataclass.output_timescale_bern3d in ["inst", "ave"], "Output timescale not found"
-
-    assert "simulation_name_bern3d" in config_dataclass.parameter_file, "simulation_name_bern3d not found in parameter file"
 
     # Check if the work directory exists, if not create it as well as the output directories
     if os.path.exists(config_dataclass.work_directory) is False:
@@ -257,6 +256,218 @@ def update_parameter_file(next_parameters: list[float], bgc_parameter_file: str,
         file.writelines(lines)
 
     logging.info("Updated parameter file")
+
+def copy_template_files(exec_name: str, new_name: str,
+                        template_dir: Path, work_dir: Path) -> None:
+
+    """
+    Copy only the necessary model files for a specific executable.
+
+    Parameters:
+    exec_name (str): Name of the executable.
+    template_dir (Path): Path to the template directory.
+    work_dir (Path): Path to the work directory.
+
+    Returns:
+    None
+    """
+
+    # Detect all executables in the template directory
+    exec_names = [
+        f.name for f in template_dir.iterdir()
+        if f.is_file() and os.access(f, os.X_OK)
+    ]
+
+    copied_files = []
+    for file in template_dir.iterdir():
+        if not file.is_file():
+            continue
+        name = file.name
+
+        # Skip Slurm logs, shell scripts, and output files
+        if name.startswith("slurm") and name.endswith(".out"):
+            continue
+        if name.endswith(".sh") or name.endswith(".out"):
+            continue
+
+        # Skip files belonging to other executables
+        if any(name.startswith(prefix) for prefix in exec_names if prefix != exec_name):
+            continue
+
+        # Determine destination filename
+        if name.startswith(exec_name):
+            # rename file itself
+            new_filename = name.replace(exec_name, new_name, 1)
+        else:
+            new_filename = name
+
+        # Copy if shared or specific to exec_name
+        if name.startswith(exec_name) or not any(name.startswith(prefix) for prefix in exec_names):
+            dest = work_dir / new_filename
+            shutil.copy2(file, dest)
+            copied_files.append(dest)
+            logging.warning(f"Copied: {name} -> {new_filename}")
+
+    # Replacement within text files
+    for file_path in copied_files:
+        try:
+            text = file_path.read_text()
+        except (UnicodeDecodeError, OSError):
+            # Skip binary or unreadable files
+            continue
+        if exec_name in text:
+            new_text = text.replace(exec_name, new_name)
+            file_path.write_text(new_text)
+            logging.warning(f"Replaced '{exec_name}' with '{new_name}' in: {file_path.name}")
+
+def create_new_parameter_file(config_dict: dict[str, Union[str, int, float]],
+                              parameter_file_name: str) -> str:
+
+    """
+    Create a new parameter file based on the configuration dictionary.
+
+    Parameters:
+    config_dict (dict): Configuration dictionary.
+    executable_name (str): Name of the executable.
+    parameter_suffix (str): Suffix for the parameter file.
+
+    Returns:
+    str: Path to the new parameter file.
+    """
+    with open(parameter_file_name, 'w', encoding='utf-8') as file:
+        for key, value in config_dict.items():
+            if isinstance(value, bool):
+                value_str = '.true.' if value else '.false.'
+            elif isinstance(value, (int, float)):
+                value_str = str(value)
+            else:
+                value_str = f'{value}'
+            file.write(f"{key} = {value_str}\n")
+
+    return parameter_file_name
+
+
+def infer_type(value:str) -> Union[str, int, float]:
+    """
+    Infer the type of a value from a string.
+
+    Parameters:
+    value (str): Value to infer type from.
+
+    Returns:
+    Union[str, int, float]: Inferred type value.
+    """
+    # remove leading and trailing whitespace
+    v = value.strip()
+
+    if v.lower() in ('.true.', 'true'):
+        return True
+    if v.lower() in ('.false.', 'false'):
+        return False
+    if re.fullmatch(r'[+-]?\d+', v):
+        return int(v)
+    if re.fullmatch(r'[+-]?\d*\.?\d*[eE][+-]?\d+', v):
+        return float(v)
+    if re.fullmatch(r'[+-]?\d*\.\d*', v) and '.' in v:
+        return float(v)
+
+    return v.strip('"').strip("'")
+
+
+def parse_to_dict(file_path: str) -> dict[str, Union[str, int, float]]:
+    """
+    Parse a file to a dictionary.
+
+    Parameters:
+    file_path (str): Path to the file to parse.
+
+    Returns:
+    dict: Parsed dictionary.
+    """
+
+    config_dict: dict[str, Union[str, int, float]] = {}
+    with open(file_path, 'r', encoding='utf-8') as file:
+        for line in file:
+            code = line.split('#',1)[0].strip()  # Remove comments
+            if not code or "=" not in code:
+                continue
+            key, value = map(str.strip, code.split('=', 1))
+            config_dict[key] = infer_type(value)
+
+    return config_dict
+
+def adapt_dictionary(config_dict: dict[str, Union[str, int, float]],
+                     parameter: Union[list[str], str],
+                     factor: float,
+                     new_value: Union[list[Union[int, float]], Union[int, float]] = None) -> dict[str, Union[str, int, float]]:
+
+    """
+    Adapt the configuration dictionary based on the parameters and relative change.
+
+    Parameters:
+    config_dict (dict): Configuration dictionary to adapt.
+    parameter (str or list): Parameter(s) to adapt.
+    value (Union[int, float]): New value for the parameter.
+
+    Returns:
+    dict: Adapted configuration dictionary.
+    """
+    if not isinstance(parameter, list):
+        parameter = [parameter]
+    if not isinstance(new_value, list):
+        new_value = [new_value]
+
+    assert len(parameter) == len(new_value), "Length of parameter and new_value must be the same"
+
+    for param, new_val in zip(parameter, new_value):
+        original_value = config_dict[param]
+        if isinstance(original_value, (int, float)):
+            if new_value is None:
+                config_dict[param] = factor*original_value
+            else:
+                config_dict[param] = new_val
+
+    return config_dict
+
+
+
+def setup_run_directory(template_dir: str, executable_name: str,
+                        new_name: str, work_dir: str,
+                        restart_files: str) -> str:
+
+    """
+    Set up the run directory for a new simulation.
+
+    Parameters:
+    template_dir (str): Path to the template directory.
+    executable_name (str): Name of the Bern3D executable.
+    new_name (str): New name for the simulation.
+    work_dir (str): Path to the work directory.
+    restart_files (str): Path to the restart files.
+
+    Returns:
+    str: Path to the run directory.
+    """
+
+    # Create a run directory
+    run_directory = os.path.join(work_dir, 'run')
+    results_directory = os.path.join(work_dir, 'results')
+    os.makedirs(run_directory, exist_ok=True)
+    os.makedirs(results_directory, exist_ok=True)
+
+    # Copy necessary files from the template directory
+    copy_template_files(executable_name, new_name, Path(template_dir), Path(run_directory))
+
+    # Copy the restart file if it exists
+    if not restart_files is None:
+        restart_files = glob.glob(restart_files)
+        if restart_files:
+            for file in restart_files:
+                dest_file = os.path.join(results_directory, os.path.basename(file))
+                if not os.path.exists(dest_file):
+                    shutil.copy(file, dest_file)
+
+    return run_directory
 
 def create_new_simulation(new_name: str, old_name: str,
                           template_path: str, work_directory: str,

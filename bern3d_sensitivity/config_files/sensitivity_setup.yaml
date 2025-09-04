@@ -20,7 +20,7 @@ target_field:
    Fe: ".00001765_full_ave.nc"
 
 # Work directory
-work_directory: "/storage/scratch/users/uh24x373/sensitivity_Fe/"
+work_directory: "/storage/scratch/users/uh24x373/sensitivity_Fe_V3/"
 # Path to the sbatch script
 bern3d_run_script: "/storage/homefs/uh24x373/bgc_bern/bern3d_tools/bern3d_sensitivity/runscripts/run_bern3d_f90_sequential.sh"
 evaluation_script: "/storage/homefs/uh24x373/bgc_bern/bern3d_tools/bern3d_sensitivity/runscripts/run_evaluation.sh"

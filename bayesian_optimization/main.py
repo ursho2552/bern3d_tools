@@ -77,14 +77,15 @@ def main(configuration_file: str, current_iteration: int, email: str) -> None:
                                              wildcard = wildcard)
 
             parameter_list = list(my_config.parameter_bounds.keys())
+            # adapt how targets are passed to compute_and_tell_optimizer, since they should be passed as kwargs
 
             initial_df, my_optimizer = bo.compute_and_tell_optimizer(optimizer = my_optimizer,
                                                                      target = my_config.isotope,
                                                                      parameter_list = parameter_list,
                                                                      simulation_dict = simulation_dictionary,
                                                                      validation_data_path = my_config.validation_data_path,
-                                                                     parameter_file_template = my_config.parameter_file,
-                                                                     target_amoc = my_config.target_amoc)
+                                                                     parameter_file_template = my_config.bern3d_parameter_file,
+                                                                     **my_config.target_values)
 
             initial_df.to_csv(f"{my_config.output_dir_optimizer}/{my_config.isotope}_df_simulations.csv")
 
@@ -122,20 +123,26 @@ def main(configuration_file: str, current_iteration: int, email: str) -> None:
 
         # Create new simulation files with runname equal to my_simulation_name
         my_simulation_name = f"{my_config.simulation_name_bern3d}_{str(batch_number).zfill(2)}_{str(current_iteration).zfill(3)}"
-        new_simulation_path = bo.create_new_simulation(new_name = my_simulation_name,
-                                                       old_name = my_config.template_name_bern3d,
-                                                       work_directory = my_config.work_directory,
-                                                       template_path = my_config.bern3d_template,
-                                                       bern3d_f90=my_config.bern3d_f90,
-                                                       initialization_file=my_config.initialization_file,
-                                                       initialization_destination=my_config.output_files_bern3d)
+        # Support for Bern3D_F90 only
+        new_simulation_path = bo.setup_run_directory(template_dir=my_config.bern3d_template,
+                                                  executable_name=my_config.bern3d_executable_name,
+                                                  new_name=my_simulation_name,
+                                                  work_dir=my_config.work_directory,
+                                                  restart_files=my_config.bern3d_restart_files)
 
         # update parameter file
-        new_parameter_file_path = new_simulation_path/my_config.parameter_file.format(simulation_name_bern3d=my_simulation_name)
-        bo.update_parameter_file(next_parameter,
-                                 new_parameter_file_path,
-                                 my_config.parameter_mapping,
-                                 bern3d_f90=my_config.bern3d_f90)
+        param_file = f"{new_simulation_path}/{my_simulation_name}{my_config.bern3d_parameter_file}"
+        parameter_dict = bo.parse_to_dict(file_path=param_file)
+
+        # Adapt value
+        # paramter list is taken from parameter_bounds keys
+        parameter_names = list(my_config.parameter_bounds.keys())
+        parameter_dict = bo.adapt_dictionary(config_dict=parameter_dict,
+                                             parameter=parameter_names,
+                                             factor=1, new_value=next_parameter)
+        # Create new parameter file
+        new_param_file = bo.create_new_parameter_file(config_dict=parameter_dict,
+                                                parameter_file_name=param_file)
 
         # run the new simulation
         model_job_id = shared_utils.submit_job(script_template=my_config.bern3d_script,
@@ -146,6 +153,7 @@ def main(configuration_file: str, current_iteration: int, email: str) -> None:
 
         my_simulation_ids.append(model_job_id)
         my_simulation_names.append(my_simulation_name)
+
 
     # Create and run dependent sbatch simulation for post-processing
     # command line arguments for the postprocessing script
