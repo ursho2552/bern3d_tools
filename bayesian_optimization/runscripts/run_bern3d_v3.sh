@@ -24,6 +24,7 @@ module load Workspace/2.1
 ulimit -s unlimited
 export OMP_STACKSIZE=32M
 export OMP_PROC_BIND=close
+export HDF5_USE_FILE_LOCKING=FALSE
 
 ./$SLURM_JOB_NAME $SLURM_JOB_NAME
 
