@@ -290,19 +290,19 @@ def score_npzd(target: str, parameter_list: list[str], model_xr: dict[str, xr.Da
     target_file = f"{validation_data_path}/world_68x46.observations.nc"
     assert os.path.exists(target_file), f"{target_file} file does not exist."
 
-    ds_target = xr.open_dataset(target_file)
+    ds_target = xr.open_dataset(target_file, decode_times=False)
 
     obs_df_dic = ds_target["dic"].values
-    sim_variable_name_dic = "dic"
+    sim_variable_name_dic = "DIC"
 
     obs_df_alk = ds_target["alk"].values
-    sim_variable_name_alk = "alk"
+    sim_variable_name_alk = "ALK"
 
     obs_df_po4 = ds_target["po4"].values
-    sim_variable_name_po4 = "po4"
+    sim_variable_name_po4 = "PO4"
 
     obs_df_sio = ds_target["sio"].values
-    sim_variable_name_sio = "sio"
+    sim_variable_name_sio = "SiO"
 
     # Can have dic, alk, po4, poc, caco3, opal, npp
     composite_scores: dict[str, float] = {}
@@ -310,7 +310,6 @@ def score_npzd(target: str, parameter_list: list[str], model_xr: dict[str, xr.Da
 
     for i, sim in enumerate(sims):
         # Check if the simulation was successful
-
         if simulation_finished(log_files[i]):
             error_dic = 0.0
             error_alk = 0.0
@@ -553,9 +552,8 @@ def compute_and_tell_optimizer(optimizer: Optimizer, target: str,
         root_dir = Path(sim).parent.parent
         name_sim = Path(sim).name.split(".")[0]
         name_param = f"{name_sim}{parameter_file_template}"
-        parameter_files.append(f"{root_dir}/run_{name_sim}/{name_param}")
-        log_files.append(f"{root_dir}/run_{name_sim}/{name_sim}.out")
-
+        parameter_files.append(f"{root_dir}/run/{name_param}")
+        log_files.append(f"{root_dir}/run/{name_sim}.out")
 
     test_df = calculate_score_df(target, parameter_list, simulation_dict, simulation_names,
                                  validation_data_path, parameter_files, log_files, **kwargs)

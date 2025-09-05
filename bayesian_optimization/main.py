@@ -15,6 +15,7 @@ if repo_root not in sys.path:
 import argparse
 import logging
 import pickle
+import time
 
 import numpy as np
 from skopt import Optimizer
@@ -150,6 +151,8 @@ def main(configuration_file: str, current_iteration: int, email: str) -> None:
                                         executable_path=new_simulation_path,
                                         time=my_config.bern3d_script_time,
                                         header_command=f"--mail-user={email}")
+        # wait for 2 seconds to avoid overloading the scheduler
+        time.sleep(2)
 
         my_simulation_ids.append(model_job_id)
         my_simulation_names.append(my_simulation_name)

@@ -88,7 +88,7 @@ def main(configuration_file, simulation_names) -> None:
 if __name__ in "__main__":
 
     # Parse command line arguments
-    # python postprocessing.py --configuration_name bayesian_optimization/config_temperature.yaml --simulation_name Bay_wind_00_000,Bay_wind_01_000,Bay_wind_02_000,Bay_wind_03_000,Bay_wind_04_000,Bay_wind_05_000,Bay_wind_06_000,Bay_wind_07_000,Bay_wind_08_000,Bay_wind_09_000,Bay_wind_10_000,Bay_wind_11_000,Bay_wind_12_000,Bay_wind_13_000,Bay_wind_14_000,Bay_wind_15_000,Bay_wind_16_000,Bay_wind_17_000,Bay_wind_18_000,Bay_wind_19_000,Bay_wind_20_000,Bay_wind_21_000,Bay_wind_22_000,Bay_wind_23_000,Bay_wind_24_000,Bay_wind_25_000,Bay_wind_26_000,Bay_wind_27_000,Bay_wind_28_000,Bay_wind_29_000
+    # python postprocessing.py --configuration_name bayesian_optimization/config_new.yaml --simulation_name NPZD_00_000,NPZD_01_000,NPZD_02_000,NPZD_03_000,NPZD_04_000,NPZD_05_000,NPZD_06_000,NPZD_07_000,NPZD_08_000,NPZD_09_000,NPZD_10_000,NPZD_11_000,NPZD_12_000,NPZD_13_000,NPZD_14_000,NPZD_15_000,NPZD_16_000,NPZD_17_000,NPZD_18_000,NPZD_19_000,NPZD_20_000,NPZD_21_000,NPZD_22_000,NPZD_23_000,NPZD_24_000,NPZD_25_000,NPZD_26_000,NPZD_27_000,NPZD_28_000,NPZD_29_000
     logging.basicConfig(level=logging.INFO)
     parser = argparse.ArgumentParser(description='Postprocessing for Bayesian optimization module')
     parser.add_argument('--configuration_name', required=True, type=str,
