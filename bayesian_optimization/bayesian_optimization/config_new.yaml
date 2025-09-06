@@ -22,7 +22,7 @@ output_timescale_bern3d: "ave"
 wildcard_simulation: None
 
 # The path to the working directory
-work_directory: "/storage/scratch/users/uh24x373/NPZD_tuning/"
+work_directory: "/storage/scratch/users/uh24x373/NPZD_tuning_1000/"
 output_files_bern3d: None
 output_dir_optimizer: None
 
@@ -74,9 +74,9 @@ parameter_bounds:
 
 initialization_type: "random" # Type of initialization
 isotope: "dic_alk_po4_sio_npp_poc_caco3_opal"      # Target of interest
-n_initialization: 10             # Number of initializations 10
+n_initialization: 5             # Number of initializations 10
 surrogate_type: "RF"              # Surrogate type
 acquisition_type: "gp_hedge"            # Acquisition type
-batchsize: 30                      # Batch size
+batchsize: 10                     # Batch size
 acquisitition_optimizer: "auto"   # Acquisition optimizer
 job_number: -1                     # Job number

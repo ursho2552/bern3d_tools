@@ -49,7 +49,6 @@ def main(configuration_file: str, current_iteration: int, email: str) -> None:
             simulation_initialization = True
             wildcard = my_config.wildcard_simulation
 
-
         else:
 
             logging.info("Initialize with %s", my_config.initialization_type)
