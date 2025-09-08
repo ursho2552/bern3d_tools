@@ -327,16 +327,16 @@ def score_npzd(target: str, parameter_list: list[str], model_xr: dict[str, xr.Da
 
             # Calculate the MAE for temperature
             if 'dic' in target.lower():
-                sim_df = model_ds[sim_variable_name_dic].values
+                sim_df = model_ds[sim_variable_name_dic].values * 1000
                 error_dic = nrmse(sim_df, obs_df_dic, 1)
             if 'alk' in target.lower():
-                sim_df = model_ds[sim_variable_name_alk].values
+                sim_df = model_ds[sim_variable_name_alk].values * 1000
                 error_alk = nrmse(sim_df, obs_df_alk, 1)
             if 'po4' in target.lower():
-                sim_df = model_ds[sim_variable_name_po4].values
+                sim_df = model_ds[sim_variable_name_po4].values * 1000
                 error_po4 = nrmse(sim_df, obs_df_po4, 1)
             if 'sio' in target.lower():
-                sim_df = model_ds[sim_variable_name_sio].values
+                sim_df = model_ds[sim_variable_name_sio].values * 1000
                 error_sio = nrmse(sim_df, obs_df_sio, 1)
 
             # Calculate difference in export value, pools, and NPP
