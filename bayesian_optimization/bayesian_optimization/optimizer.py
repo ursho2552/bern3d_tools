@@ -438,7 +438,7 @@ def calculate_score_df(target: str, parameter_list: list[str],
                               sims, validation_data_path, parameter_files,
                               log_files, **kwargs)
     else:
-        raise ValueError("Target must be either 'Pad', 'Thd', 'Temperature', or 'Salinity'.")
+        raise ValueError("Target must be the isotopes 'Pad' and/or 'Thd', the variables 'temp' and/or 'salt', or the variables 'dic', 'alk', 'po4', 'sio', 'poc', 'caco3', 'opal', 'npp'.")
 
     return param_df
 

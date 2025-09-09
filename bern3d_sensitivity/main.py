@@ -53,7 +53,7 @@ def main(configuration_file: str, email: str, analyze_runs: bool = False) -> Non
                     new_name = "Reference"
                     factor = 1.0
                 # Copy the template executable and parameter file
-                run_directory = sa.setup_run_directory(template_dir=my_config.bern3d_template,
+                run_directory = shared_utils.setup_run_directory(template_dir=my_config.bern3d_template,
                                                 executable_name=my_config.bern3d_executable_name,
                                                 new_name=new_name,
                                                 work_dir=my_config.work_directory,
@@ -63,15 +63,15 @@ def main(configuration_file: str, email: str, analyze_runs: bool = False) -> Non
                     # Update the parameter file with the new parameter value
                     # get current parameter values
                     param_file = f"{run_directory}/{new_name}{my_config.bern3d_parameter_file}"
-                    parameter_dict = sa.parse_to_dict(file_path=param_file)
+                    parameter_dict = shared_utils.parse_to_dict(file_path=param_file)
 
                     # Adapt value
-                    parameter_dict = sa.adapt_dictionary(config_dict=parameter_dict,
+                    parameter_dict = shared_utils.adapt_dictionary(config_dict=parameter_dict,
                                                     parameter=parameter,
                                                     factor=factor)
                     # Create new parameter file
-                    new_param_file = sa.create_new_parameter_file(config_dict=parameter_dict,
-                                                            parameter_file_name=param_file)
+                    _ = shared_utils.create_new_parameter_file(config_dict=parameter_dict,
+                                                               parameter_file_name=param_file)
 
                 # Submit the job
                 model_job_id = shared_utils.submit_job(script_template=my_config.bern3d_run_script,
@@ -81,35 +81,32 @@ def main(configuration_file: str, email: str, analyze_runs: bool = False) -> Non
                                                     header_command=f"--mail-user={email}"
                                                     )
                 model_jobs.append(model_job_id)
-        # Launch dependent job for evaluation
 
+        # Launch dependent job for evaluation
         command_line_arg = [f"{my_config.main_script_path}/{configuration_file}"]
 
         executable_name = f"{my_config.main_script_path}/main.py"
-        postprocessing_job_id = shared_utils.submit_job(script_template=my_config.evaluation_script,
-                                            executable_name=executable_name,
-                                            executable_path=my_config.work_directory,
-                                            time=my_config.time_evaluation,
-                                            header_command=f"--mail-user={email}",
-                                            dependency=model_jobs,
-                                            dependency_type="afterany",
-                                            command_line_arg=command_line_arg)
-
+        _ = shared_utils.submit_job(script_template=my_config.evaluation_script,
+                                    executable_name=executable_name,
+                                    executable_path=my_config.work_directory,
+                                    time=my_config.time_evaluation,
+                                    header_command=f"--mail-user={email}",
+                                    dependency=model_jobs,
+                                    dependency_type="afterany",
+                                    command_line_arg=command_line_arg)
 
     else:
-        logging.info("Analyzing runs...")
         # Analyze results
+        logging.info("Analyzing runs...")
         results_df = sa.analyze_sensitivity_results(my_config, parameter_list)
 
         # Save results
         sa.save_sensitivity_summary(results_df, my_config.work_directory)
-
         logging.info("Sensitivity analysis complete!")
 
 if __name__ == "__main__":
     # Usage:
     # python main.py --configuration_name config_files/sensitivity_setup.yaml
-
     parser = argparse.ArgumentParser(description="Run sensitivity analysis for BERN3D model.")
     parser.add_argument("--configuration_name", required=True,
                         type=str, help="Path to the configuration file.")
