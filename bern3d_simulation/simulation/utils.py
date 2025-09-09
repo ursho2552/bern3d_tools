@@ -4,7 +4,6 @@
 These are the utility functions used to run the model with possible restart.
 """
 import logging
-import shutil
 from pathlib import Path
 from dataclasses import dataclass
 from typing import Optional, TypeVar
@@ -19,6 +18,7 @@ class JobConfig:
     # Path to the script template
     bern3d_template: str
     bern3d_executable_name: str
+    bern3d_restart_files: str
 
     # Path to the work directory
     work_directory: str
@@ -61,110 +61,6 @@ def check_configuration(config_dataclass: JobConfig) -> JobConfig:
     assert config_dataclass.bern3d_executable_name, "Executable name cannot be empty."
 
     return config_dataclass
-
-
-def create_simulation_run_directory(bern3d_template_path: str, bern3d_template_name: str,
-                                    work_directory: str, new_name: str) -> str:
-    """
-    Create a spinup run directory and copy the template files to it.
-
-    Parameters:
-    bern3d_template_path (str): Path to the template files.
-    bern3d_template_name (str): Name of the template files.
-    work_directory (str): Path to the work directory.
-    new_name (str): New name for the simulation.
-
-    Returns:
-    str: Path to the new simulation directory.
-    """
-    # Define the new simulation path
-    new_simulation_path = Path(work_directory) / f"run_{new_name}"
-
-    # Step 1: Copy the template directory
-    copy_template_directory(bern3d_template_path, new_simulation_path)
-
-    # Step 2: Create the results directory
-    create_results_directory(work_directory)
-
-    # Step 3: Replace placeholders in specific files
-    replace_placeholders_in_files(new_simulation_path, bern3d_template_name, new_name)
-
-    # Step 4: Rename files that start with the old name
-    rename_files(new_simulation_path, bern3d_template_name, new_name)
-
-    return new_simulation_path
-
-def copy_template_directory(template_path: str, destination_path: Path) -> None:
-    """
-    Copy the template directory to the destination path.
-
-    Parameters:
-    template_path (str): Path to the template directory.
-    destination_path (Path): Path to the destination directory.
-
-    Returns:
-    None
-    """
-    shutil.copytree(template_path, destination_path, dirs_exist_ok=True)
-
-
-def create_results_directory(work_directory: str) -> None:
-    """
-    Create a results directory in the work directory.
-
-    Parameters:
-    work_directory (str): Path to the work directory.
-
-    Returns:
-    None
-    """
-    results_dir = Path(work_directory) / "results"
-    results_dir.mkdir(parents=True, exist_ok=True)
-
-
-def replace_placeholders_in_files(directory: Path, old_name: str, new_name: str) -> None:
-    """
-    Replace placeholders in specific files within the directory.
-
-    Parameters:
-    directory (Path): Path to the directory containing the files.
-    old_name (str): Placeholder to replace.
-    new_name (str): New value to replace the placeholder with.
-
-    Returns:
-    None
-    """
-    files_to_edit = ["parallel.sh", "parallel_investor.sh", f"{old_name}.main.parameter"]
-
-    for file_name in files_to_edit:
-        file_path = directory / file_name
-        if file_path.exists():
-            with file_path.open('r', encoding='utf-8') as file:
-                content = file.read()
-            content = content.replace(old_name, new_name)
-            with file_path.open('w', encoding='utf-8') as file:
-                file.write(content)
-        else:
-            logging.warning("%s not found!", file_name)
-
-
-def rename_files(directory: Path, old_name: str, new_name: str) -> None:
-    """
-    Rename files in the directory that start with the old name.
-
-    Parameters:
-    directory (Path): Path to the directory containing the files.
-    old_name (str): Old name to replace.
-    new_name (str): New name to use.
-
-    Returns:
-    None
-    """
-    for file in directory.glob(f"{old_name}*"):
-        new_file_name = file.name.replace(old_name, new_name)
-        file.rename(directory / new_file_name)
-        logging.info("Renamed: %s -> %s", file, directory / new_file_name)
-
 
 def check_simulation_status(run_path: str, executable_name: str,
                             success_string: Optional[str] = "SIMULATION COMPLETE") -> bool:

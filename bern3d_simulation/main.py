@@ -38,16 +38,17 @@ def main(config_file: str, initial_submission: bool, email: str) -> None:
     if initial_submission:
         logging.info("Initial submission of the job.")
         # copy the job to the work directory
-        new_path = sim.create_simulation_run_directory(my_config.bern3d_template,
-                                            my_config.bern3d_executable_name,
-                                            my_config.work_directory,
-                                            my_config.simulation_name)
+        run_directory = shared_utils.setup_run_directory(template_dir=my_config.bern3d_template,
+                                                    executable_name=my_config.bern3d_executable_name,
+                                                    new_name=my_config.simulation_name,
+                                                    work_dir=my_config.work_directory,
+                                                    restart_files=my_config.bern3d_restart_files)
 
     else:
 
         # Check if job finished
-        new_path = f"{my_config.work_directory}/run_{my_config.simulation_name}"
-        simulation_status = sim.check_simulation_status(new_path,
+        run_directory = f"{my_config.work_directory}/run"
+        simulation_status = sim.check_simulation_status(run_directory,
                                                         my_config.simulation_name)
 
         if simulation_status:
@@ -56,7 +57,8 @@ def main(config_file: str, initial_submission: bool, email: str) -> None:
 
     logging.info("(Re)starting the simulation...")
     sim_id = shared_utils.submit_job(my_config.bern3d_submit_script, my_config.simulation_name,
-                            new_path, my_config.time_bern3d, header_command=f"--mail-user={email}")
+                                     run_directory, my_config.time_bern3d,
+                                     header_command=f"--mail-user={email}")
 
     # Launch dependent job
     command_line_arguments = [my_config.config_file, "--restart", email]
