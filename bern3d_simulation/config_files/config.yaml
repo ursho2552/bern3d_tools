@@ -1,6 +1,8 @@
 # Path to the script template
 bern3d_template: /storage/homefs/uh24x373/bgc_bern/bern3d_f90/run
 bern3d_executable_name: RUNNAME
+# Restart files for run. Can also be !!python/none
+bern3d_restart_files: "/storage/scratch/users/uh24x373/bern3d_f90/results/Spinup2*"
 
 # Path to the work directory
 work_directory: "/storage/scratch/users/uh24x373/test_restart/"
