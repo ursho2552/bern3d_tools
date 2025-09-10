@@ -245,7 +245,15 @@ def score_temp_salt_amoc_ida(target: str, parameter_list: list[str],
                 sim_amoc = ds_amoc['OPSIA_max'][-1].values
                 error_amoc = 1 + (abs(sim_amoc - target_amoc)/target_amoc if sim_amoc < target_amoc_min or sim_amoc > target_amoc_max else 0.0)
 
-            total_error = error_amoc*(error_temp + error_salt  + error_ida)
+            # Combine errors. If temperature, salinity and ideal age are perfect or not used,
+            # then the total error is just the AMOC error. Else, the amoc error is used as a multiplier
+            # for the other errors.
+            main_error = error_temp + error_salt + error_ida
+            if main_error == 0:
+                total_error = error_amoc - 1
+            else:
+                total_error = error_amoc*main_error
+
             if total_error > 10:
                 total_error = 1e6
             elif total_error < 0:
@@ -374,7 +382,15 @@ def score_npzd(target: str, parameter_list: list[str], model_xr: dict[str, xr.Da
 
             bulk_errors = 1 + error_npp + error_poc + error_caco3 + error_opal
 
-            total_error = bulk_errors*(error_dic + error_alk  + error_po4 + error_sio)
+            # Combine errors. If dic, alk, po4, and sio are perfect or not used,
+            # then the total error is just the export and NPP error. Else, the export and NPP error
+            # are used as a multiplier for the other errors.
+            main_error = error_dic + error_alk  + error_po4 + error_sio
+            if main_error == 0:
+                total_error = bulk_errors - 1
+            else:
+                total_error = bulk_errors*main_error
+
             print(f"Total error is {total_error}")
             print (f"error_dic: {error_dic}, error_alk: {error_alk}, error_po4: {error_po4}, error_sio: {error_sio}")
             print (f"error_npp: {error_npp}, error_poc: {error_poc}, error_caco3: {error_caco3}, error_opal: {error_opal}")

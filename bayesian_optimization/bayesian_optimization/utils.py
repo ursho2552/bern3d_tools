@@ -162,7 +162,39 @@ def check_configuration(config_dataclass: ConfigParameters) -> ConfigParameters:
         bound_values[key] = tuple(transformed_values)
     config_dataclass.parameter_bounds = bound_values
 
+    # Check if the target is valid
+    check_valid_target(config_dataclass.tuning_target)
+
     return config_dataclass
+
+def check_valid_target(target: str) -> None:
+    """
+    Check if the provided target is a valid option for scoring.
+
+    Parameters:
+    target (str): The target string to check.
+
+    Raises:
+    ValueError: If the target is not a valid option.
+    """
+    allowed_isotopes = ["Pad", "Thd"]
+    allowed_vars = ["temp", "salt", "amoc", "ida"]
+    allowed_npzd = ["dic", "alk", "po4", "sio", "poc", "caco3", "opal", "npp"]
+
+    # Single isotope
+    if target in allowed_isotopes:
+        return
+    split_target = target.lower().split("_")
+    if all(t in allowed_vars for t in split_target):
+        return
+    if all(t in allowed_npzd for t in split_target):
+        return
+
+    raise ValueError(
+        f"Invalid target '{target}'. Allowed options are: "
+        f"any single or underscore-separated combination of {allowed_vars}, or "
+        f"{allowed_npzd}, or a single isotope of {allowed_isotopes} (but not mixed)."
+    )
 
 def access_file(model_output_files: str, simulation_name: Union[str, list[str]], output_type: str,
                 output_timescale: str, simulation_initialization: bool = False,
