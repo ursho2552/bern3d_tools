@@ -20,7 +20,7 @@ class ConfigParameters:
     bern3d_restart_files: str
 
     # Sensitivity analysis parameters
-    parameter_list: str
+    parameter_list: dict[str, float | None]
     relative_change: float
     target_field: dict[str, str]
 

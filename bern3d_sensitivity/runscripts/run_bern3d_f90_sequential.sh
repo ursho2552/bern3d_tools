@@ -8,7 +8,7 @@
 #SBATCH --qos=job_icpu-poeppelmeier
 #SBATCH --mem=2G
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=1
+#SBATCH --cpus-per-task=8
 
 # Load modules
 module load intel/2023a

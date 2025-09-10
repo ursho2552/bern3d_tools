@@ -1,71 +1,187 @@
-# Bern3D Sensitivity Analysis Module
-This module is designed to perform comprehensive sensitivity analysis for the Bern3D Model. It systematically varies model parameters to quantify their impact on key variables, providing insights into model behavior and parameter importance.
+# Sensitivity Analysis Module
 
-## Features
-- Automated Parameter Variation: Systematically creates high and low parameter variations based on configurable relative changes.
-- Parallel Job Submission: Submits multiple sensitivity runs using SLURM with configurable parameters and dependencies.
-- Reference Run Generation: Automatically creates a baseline reference run for comparison.
-- Comprehensive Analysis: Compares sensitivity runs against reference to quantify parameter impacts.
-- Flexible Configuration: Uses YAML configuration files to define parameters, paths, and analysis settings.
-- Robust Error Handling: Tracks failed runs and handles missing output files gracefully.
-- Statistical Metrics: Calculates multiple sensitivity metrics including relative differences, spatial statistics, and rankings.
+This module provides a framework for performing **sensitivity analysis** of model parameters, specifically designed for use with the Bern3D model. It automates the process of running model simulations with perturbed parameters, evaluating the impact on model outputs, and summarizing the results.
 
-## File Structure
+---
 
-The module consists of the following key components:
+## Table of Contents
 
-**Core Scripts**
-- `main.py`: Main entry point for both running sensitivity experiments and analyzing results.
-- `sensitivity/`: Directory containing core functionality
-    - `utils.py`: Utility functions for configuration validation, file parsing, and directory setup.
-    - `evaluation.py`: Analysis functions for processing sensitivity results and calcualting metrics
-    - `__init__.py`: Package initialization importing all analysis functions.
+- [Overview](#overview)
+- [How It Works](#how-it-works)
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [Usage](#usage)
+- [Directory Structure](#directory-structure)
+- [Extending and Customization](#extending-and-customization)
+- [Troubleshooting](#troubleshooting)
+- [Contributing](#contributing)
+- [License](#license)
+- [Acknowledgements](#acknowledgements)
 
-**Configuration**
-- `sensitivity_setup.yaml`: Main configuration file specifying:
-    - Model paths and executable names.
-    - Parameter lists for sensitivity analysis.
-    - Target variables and output files.
-    - SLURM script paths and timing settings.
+---
 
-**SLURM Scripts**
-- `runscripts/run_bern3d_f90_sequential.sh`: SLURM script for executing Bern3D model runs
-- `runscripts/run_evaluation.sh`: SLURM script for post-processing and analysis jobs
+## Overview
 
-Other example SLURM scripts for executing Bern3D in parallel with three or four heterogeneous jobs are also provided.
+This module automates the process of sensitivity analysis for Bern3D model parameters. It systematically perturbs selected parameters (using relative changes), runs the model, and evaluates the effect on specified output fields.
+
+**Key features:**
+- Automated job submission and management (supports SLURM job scripts)
+- Flexible configuration via YAML files
+- Supports both single and multiple parameter perturbations
+- Automated evaluation and summary of sensitivity results
+
+---
+
+## How It Works
+
+1. **Configuration:**
+   You provide a YAML configuration file specifying paths, parameters to perturb, relative change values, and output fields to analyze.
+
+2. **Setup:**
+   For each parameter, the module:
+   - Creates new run directories and parameter files for "Low" and "High" perturbations (decrease/increase by the specified relative change).
+   - Copies necessary model files and restart files.
+
+3. **Simulation:**
+   Each perturbed setup is submitted as a job to the cluster.
+
+4. **Evaluation:**
+   After all simulations finish, the module:
+   - Collects model outputs for each run and the reference.
+   - Compares perturbed runs to the reference for each target field.
+   - Computes sensitivity metrics (mean, absolute/relative differences, etc.).
+
+5. **Results:**
+   Results are saved as CSV files for further analysis.
+
+---
+
+## Installation
+
+To use this module, clone the repository and install the required dependencies
+
+```bash
+git clone <repository-url>
+cd bern3d_tools/bern3d_sensitivity
+```
+---
 
 ## Configuration
-To use the sensitivity module, you mainly need to customize the entries of the `sensitivity_setup.yaml` file to fit your sensitivity analysis. You may also change the SLURM scripts for changing how the model is run, or the python environment.
+
+All settings are controlled via a YAML configuration file. See `config_files/sensitivity_setup.yaml` for an example.
+
+**Key fields:**
+- `bern3d_template`: Path to the Bern3D template directory (should contain the executable and parameter files)
+- `bern3d_executable_name`: Name of the Bern3D executable
+- `bern3d_parameter_file`: Name of the parameter file to modify
+- `bern3d_restart_files`: Path (with wildcards allowed) to restart files
+- `parameter_list`: Dictionary of parameters to perturb and their relative change (e.g., `0.1` for ±10%)
+- `relative_change`: Default relative change to use if not specified for a parameter
+- `target_field`: Dictionary mapping output variable names to NetCDF file suffixes
+- `work_directory`: Directory for all outputs and temporary files
+- `bern3d_run_script`: Path to the SLURM or shell script for running the model
+- `evaluation_script`: Path to the script for evaluating results
+- `time_bern3d`, `time_evaluation`: Maximum allowed run times for jobs
+
+**Example:**
+```yaml
+bern3d_template: "/path/to/bern3d_f90/run"
+bern3d_executable_name: "RUNNAME"
+bern3d_parameter_file: ".bgc.parameter"
+bern3d_restart_files: "/path/to/results/Spinup2*"
+
+parameter_list:
+  ligtot: 0.1
+  freefemax: 0.4
+  kscavcons: 0.7
+
+relative_change: 0.25
+
+target_field:
+  Fe: ".00001765_full_ave.nc"
+
+work_directory: "/path/to/sensitivity_analysis/"
+bern3d_run_script: "/path/to/run_bern3d_f90_sequential.sh"
+evaluation_script: "/path/to/run_evaluation.sh"
+main_script_path: "/path/to/bern3d_sensitivity/"
+time_bern3d: "10:00:00"
+time_evaluation: "01:00:00"
+```
+
+---
 
 ## Usage
-Run the following command
-```bash
-python main.py --configuration_name config_files/sensitivity_setup.yaml --email your.email@domain.com
-```
 
-This will:
-- Create a reference run with original parameters
-- Generate high (+X%) and low (-X%) variations for each parameter
-- Submit all jobs to SLURM with proper dependencies
-- Schedule an analysis job to run after all simulations complete
+1. **Prepare your configuration file**
+   Edit a copy of `sensitivity_setup.yaml` to match your system, model, and analysis goals.
 
-In case you want to only analyze the results you can use the following:
-```bash
-python main.py --configuration_name config_files/sensitivity_setup.yaml --analyze_runs
-```
+2. **Ensure your template directory is ready**
+   The `bern3d_template` directory should contain all files needed to run a Bern3D simulation.
 
-## Output files
-The module generates several output files in the work directory:
-- `sensitivity_analysis_results.csv`: Detailed results for all runs
-- `sensitivity_summary.csv`: Aggregated statistics by parameter
-- `run/`: Directory containing all model executables and input files
-- `results/`: Directory containing all model output files
+3. **Run the sensitivity analysis:**
+   ```bash
+   python main.py --configuration_name config_files/sensitivity_setup.yaml
+   ```
+   Optional arguments:
+   - `--email`: Email address for job notifications (default: system username)
+   - `--analyze_runs`: Analyze results after simulations finish (set this flag to skip job creation and only analyze)
 
-## Parameter Requirements
+4. **Monitor progress:**
+   Output and logs are written to the `work_directory` specified in your config.
 
-Parameters must be:
+5. **Analyze results:**
+   After all jobs finish, run:
+   ```bash
+   python main.py --configuration_name config_files/sensitivity_setup.yaml --analyze_runs
+   ```
+   This will generate CSV files summarizing the sensitivity results.
 
-- Present in the model parameter file
-- Numeric (integer or float values)
-- Non-zero (for relative change calculations)
-- Properly formatted in the configuration file
+---
+
+## Directory Structure
+
+- `main.py` — Entry point for the sensitivity analysis workflow
+- `sensitivity/utils.py` — Utility functions for file handling, parameter updates, etc.
+- `sensitivity/evaluation.py` — Evaluation and summary of sensitivity results
+- `config_files/` — Example configuration files
+- `runscripts/` — Example SLURM or shell scripts for running simulations and evaluation
+
+---
+
+## Extending and Customization
+
+- **Target Fields:**
+  You can add or change output variables to analyze by editing the `target_field` section in your config.
+- **Parameter Selection:**
+  Add or remove parameters in `parameter_list` to control which parameters are perturbed.
+- **Job Submission:**
+  The `submit_job` utility can be adapted for different schedulers or local runs.
+- **Evaluation:**
+  You can extend `evaluation.py` to compute additional metrics or handle new output formats.
+
+---
+
+## Troubleshooting
+
+- **Missing files or directories:**
+  Ensure all paths in your config file exist and are accessible.
+- **Job failures:**
+  Check the SLURM or shell script logs in your `work_directory`.
+- **Parameter errors:**
+  Make sure parameter names in your config match those in your model's parameter files and are numeric and non-zero
+- **Output errors:**
+  Ensure the output NetCDF files contain the variables specified in `target_field`.
+
+---
+
+## Contributing
+
+Contributions are welcome! Please open issues or submit pull requests for bug fixes, new features, or documentation improvements.
+
+---
+
+## License
+
+This project is licensed under the MIT License. See the LICENSE file for details.
+
+---

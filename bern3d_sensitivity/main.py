@@ -12,8 +12,6 @@ if repo_root not in sys.path:
 
 import argparse
 import logging
-import numpy as np
-import pathlib as Path
 import sensitivity as sa
 import bern3d_tools.shared.utils as shared_utils
 
@@ -32,26 +30,36 @@ def main(configuration_file: str, email: str, analyze_runs: bool = False) -> Non
     my_config = shared_utils.read_config_file(configuration_file, sa.ConfigParameters)
     my_config = sa.check_configuration(my_config)
 
-    parameter_list = [param.strip() for param in my_config.parameter_list.split(",")]
+    #parameter_list = [param.strip() for param in my_config.parameter_list.split(",")]
+    parameter_list = list(my_config.parameter_list.keys())
     parameter_list.insert(0, None)
+    parameter_factor_dict = my_config.parameter_list
 
     if not analyze_runs:
         # For each parameter create a new parameter file and executable
         model_jobs = []
         for parameter in parameter_list:
 
-            iterations = 1 if parameter is None else 2
+            if parameter in parameter_factor_dict:
+                change_factor = parameter_factor_dict[parameter] if parameter_factor_dict[parameter] is not None else my_config.relative_change
+                iterations = 2
+            else:
+                change_factor = 0.0
+                iterations = 1
+
             for i in range(iterations):
                 # Define the new name for the executable
                 # First a decrease in parameter value
-                factor = 1 + my_config.relative_change
+                factor = 1 + change_factor
                 if i == 0:
-                    factor = 1 - my_config.relative_change
+                    factor = 1 - change_factor
 
                 new_name = f"Low_{parameter}" if i == 0 else f"High_{parameter}"
                 if parameter is None:
                     new_name = "Reference"
                     factor = 1.0
+
+                print(new_name, factor)
                 # Copy the template executable and parameter file
                 run_directory = shared_utils.setup_run_directory(template_dir=my_config.bern3d_template,
                                                 executable_name=my_config.bern3d_executable_name,
