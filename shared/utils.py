@@ -206,7 +206,7 @@ def setup_run_directory(template_dir: str, executable_name: str,
 
     return run_directory
 
-def parse_to_dict(file_path: str) -> dict[str, Union[str, int, float]]:
+def parse_to_dict(file_path: str, reset: Optional[bool] = False) -> dict[str, Union[str, int, float]]:
     """
     Parse a file to a dictionary.
 
@@ -222,14 +222,15 @@ def parse_to_dict(file_path: str) -> dict[str, Union[str, int, float]]:
         for line in file:
             # Remove comments and whitespace
             code = line.split('#',1)[0].strip()
-            if not code or "=" not in code:
+            if not code and "=" not in code and ":" not in code:
                 continue
-            key, value = map(str.strip, code.split('=', 1))
-            config_dict[key] = infer_type(value)
+            symbol = "=" if "=" in code else ":"
+            key, value = map(str.strip, code.split(symbol, 1))
+            config_dict[key] = infer_type(value, reset)
 
     return config_dict
 
-def infer_type(value:str) -> Union[str, int, float]:
+def infer_type(value:str, reset: Optional[bool] = False) -> Union[str, int, float]:
     """
     Infer the type of a value from a string.
 
@@ -243,6 +244,8 @@ def infer_type(value:str) -> Union[str, int, float]:
     v = value.strip()
 
     if v.lower() in ('.true.', 'true'):
+        if reset:
+            return False
         return True
     if v.lower() in ('.false.', 'false'):
         return False
@@ -285,6 +288,11 @@ def adapt_dictionary(config_dict: dict[str, Union[str, int, float]],
                 config_dict[param] = factor*original_value
             else:
                 config_dict[param] = new_val
+
+        elif isinstance(original_value, bool):
+            config_dict[param] = new_val
+        elif isinstance(original_value, str):
+            config_dict[param] = new_val
 
     return config_dict
 

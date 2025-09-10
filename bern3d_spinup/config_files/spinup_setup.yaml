@@ -1,14 +1,17 @@
 # Path to the script template
 bern3d_template: "/storage/homefs/uh24x373/bgc_bern/optimize_wind_velocity/spinup/bern3d_f90/run"
 # Should contain the name of the executable and the path to the executable
-bern3d_executable_name: "/storage/homefs/uh24x373/bgc_bern/optimize_wind_velocity/spinup/bern3d_f90/run/RUNNAME"
+bern3d_executable_name: "RUNNAME"
+bern3d_restart_files: !!python/none
 
-# Path to the work directory
-work_directory: "/storage/homefs/uh24x373/bgc_bern/optimize_wind_velocity/spinup/bern3d_f90/results/"
-# Path of the sbatch script
-sbatch_script_phase1: "runscripts/run_bern3d_f90_phase1.sh"
-sbatch_script_phase2: "runscripts/run_bern3d_f90_phase2.sh"
-sbatch_script_phase3: "runscripts/run_bern3d_f90_phase3.sh"
+# Path to the work directory (should be in $SCRATCH)
+work_directory: "/storage/scratch/users/uh24x373/sensitivity_analysis"
+# Path of the sbatch scripts (should be in the bern3d_tools)
+sbatch_script:
+  phase1: "runscripts/run_bern3d_f90_phase1.sh"
+  phase2: "runscripts/run_bern3d_f90_phase2.sh"
+  phase3: "runscripts/run_bern3d_f90_phase3.sh"
+
 # Time to run the script
 time: "06:00:00"
 

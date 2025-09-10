@@ -15,9 +15,7 @@ if repo_root not in sys.path:
 import logging
 import argparse
 
-from pathlib import Path
 import spinup as sp
-
 import bern3d_tools.shared.utils as shared_utils
 
 def main(configuration_file: str, email: str) -> None:
@@ -40,23 +38,35 @@ def main(configuration_file: str, email: str) -> None:
 
     for spinup_phase in range(my_config.current_phase, my_config.spinup_phases + 1):
 
+        # Copy the template executable and parameter file
+        new_name = f"Spinup{spinup_phase}"
+        run_directory = shared_utils.setup_run_directory(template_dir=my_config.bern3d_template,
+                                                         executable_name=my_config.bern3d_executable_name,
+                                                         new_name=new_name,
+                                                         work_dir=my_config.work_directory,
+                                                         restart_files=my_config.bern3d_restart_files)
+
         # Load the configuration of the spinup phase
-        spinup_executable_template = getattr(my_config, f"sbatch_script_phase{spinup_phase}")
+        spinup_executable_template = my_config.sbatch_script[f"phase{spinup_phase}"]
 
         # Load the spinup configuration
-        parameter_file = f"{my_config.bern3d_template}/{Path(my_config.bern3d_executable_name).name}.main.parameter"
-        spinup_config = sp.get_main_config_fields(parameter_file, sp.override_dictionary,
-                                                  spinup_phase)
+        parameter_file = f"{my_config.work_directory}/run/{new_name}.main.parameter"
+        parameter_dict = shared_utils.parse_to_dict(file_path=parameter_file, reset=True)
 
-        # Create a new directory for the spinup phase
-        run_directory = sp.create_spinup_run_directory(my_config.bern3d_template,
-                                                       my_config.bern3d_executable_name,
-                                                       my_config.work_directory,
-                                                       spinup_phase)
+        # Adapt values in the parameter file
+        for phase in range(1, spinup_phase + 1):
+            phase_dictionary = sp.override_dictionary[f"phase_{phase}"]
+            parameter_list = list(phase_dictionary.keys())
+            parameter_values = list(phase_dictionary.values())
 
-        # Change the main parameter file
-        main_param_file = f"{run_directory}/Spinup{spinup_phase}.main.parameter"
-        sp.save_config_as_assignment(spinup_config, main_param_file)
+            parameter_dict = shared_utils.adapt_dictionary(config_dict=parameter_dict,
+                                                           parameter=parameter_list,
+                                                           factor=None,
+                                                           new_value=parameter_values)
+
+        # Create new parameter file
+        _ = shared_utils.create_new_parameter_file(config_dict=parameter_dict,
+                                                   parameter_file_name=parameter_file)
 
         # Start the simulation with potential dependencies
         dependency = None
@@ -65,11 +75,11 @@ def main(configuration_file: str, email: str) -> None:
 
         spinup_executable = f"Spinup{spinup_phase}"
         model_job_id = shared_utils.submit_job(script_template=spinup_executable_template,
-                                        executable_name=spinup_executable,
-                                        executable_path=run_directory,
-                                        time=my_config.time,
-                                        header_command=f"--mail-user={email}",
-                                        dependency=dependency)
+                                               executable_name=spinup_executable,
+                                               executable_path=run_directory,
+                                               time=my_config.time,
+                                               header_command=f"--mail-user={email}",
+                                               dependency=dependency)
 
 
 if __name__ == "__main__":
