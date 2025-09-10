@@ -19,8 +19,6 @@ This module provides a framework for performing **Bayesian optimization** of mod
 
 ---
 
----
-
 ## Overview
 
 This module automates the process of tuning model parameters using Bayesian optimization. It is especially useful for models like Bern3D, where the parameter space is high-dimensional.
