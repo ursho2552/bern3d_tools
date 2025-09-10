@@ -1,0 +1,77 @@
+# Example of configuration file tuning wind and circulation paremeters with the targets of
+# salinity, temperature, ideal age and AMOC strength.
+# This tuning was done to try and set the wind stress factor to 1
+
+config_file_path: "/storage/homefs/uh24x373/bgc_bern/bern3d_tools/bayesian_optimization/bayesian_optimization/config_salt_temp_ida_amoc.yaml"
+
+# Provide the paths where this scripts can be found. They should all be in the directory of this module
+bern3d_script: "/storage/homefs/uh24x373/bgc_bern/bern3d_tools/bayesian_optimization/runscripts/run_bern3d_f90.sh"
+postprocessing_script: "/storage/homefs/uh24x373/bgc_bern/bern3d_tools/bayesian_optimization/runscripts/run_postprocessing.sh"
+optimizer_script: "/storage/homefs/uh24x373/bgc_bern/bern3d_tools/bayesian_optimization/runscripts/run_optimizer.sh"
+python_scripts: "/storage/homefs/uh24x373/bgc_bern/bern3d_tools/bayesian_optimization/"
+
+# Define some expected times for the model to run, and for the python scripts (usually a few minutes)
+bern3d_script_time: "06:00:00"
+postprocessing_script_time: "00:15:00"
+optimizer_script_time: "00:10:00"
+
+# Name of the simulation and where the output type and timescale to use (usally only full and ave)
+simulation_name_bern3d: "Wind"
+output_type_bern3d: "full"
+output_timescale_bern3d: "ave"
+# You may also restart from past simulations using the wildcard simulation argument
+# by entering the shared name of the simulations e.g. past_simulations* or None, which will be
+# converted into *. The past simulation should be in output_files_restart and the simulation name
+# of restarts should be in simulation_name_restart
+wildcard_simulation: !!python/none
+
+# The path to the work directory (best to use scratch)
+work_directory: "/storage/scratch/users/uh24x373/Optimization_salt_temp_ida_amoc/"
+# keep as None if the output should be in the workdirectory
+output_files_bern3d: !!python/none
+output_dir_optimizer: !!python/none
+
+# Path to initialization in case of simulation initialization. In case of None, use !!python/none
+simulation_name_restart: !!python/none
+output_files_restart: !!python/none
+
+# For Bern3d-v3, the flag has to be set to False
+bern3d_f90: True
+template_name_bern3d: "RUNNAME"
+bern3d_template: "/storage/homefs/uh24x373/bgc_bern/optimize_wind_velocity/bern3d_f90/run/"
+
+# Path to the validation dataset
+validation_data_path: "/storage/homefs/uh24x373/bgc_bern/optimize_wind_velocity/bern3d_f90/run/"
+
+# The number of iterations to run the Bayesian optimization algorithm
+max_iterations: 100
+max_stable_iterations: 15
+# Targets for POC, CaCO3 and NPP in Pg C yr-1
+# Targets for Opal in Tg Si yr-1
+# Targets for amoc in °C
+target_values:
+ target_amoc: 15.5
+ target_poc: !!python/none
+ target_caco3: !!python/none
+ target_opal: !!python/none
+ target_npp: !!python/none
+
+# Path to file with parameters to be optimized
+parameter_file: ".ocn.parameter"
+bern3d_restart_files: !!python/none
+
+parameter_bounds:
+  rel: !!python/tuple [0.5, 1.0]
+  kappa0: !!python/tuple [0.1e-5,10.0e-5]
+  gmkap: !!python/tuple [100,4000]
+  idrag: !!python/tuple [0.1,4.0]
+
+
+initialization_type: "random"
+tuning_target: "temp_salt_ida_amoc"
+n_initialization: 10
+surrogate_type: "RF"
+acquisition_type: "gp_hedge"
+batchsize: 30
+acquisitition_optimizer: "auto"
+job_number: -1

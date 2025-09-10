@@ -62,7 +62,7 @@ def nrmse(predictions: npt.ArrayLike, targets: npt.ArrayLike,
 
     return nrmse_value
 
-def score_isotope(isotope: str, parameter_list: list[str],
+def score_isotope(tuning_target: str, parameter_list: list[str],
                   model_xr: dict[str, xr.Dataset], sims: list[str],
                   validation_data_path: str,
                   parameter_files: list[str]) -> pd.DataFrame:
@@ -72,14 +72,14 @@ def score_isotope(isotope: str, parameter_list: list[str],
 
     # Need to avoid using hardcoded paths (leave for now).
     # An option would be to use a config file that stores this information for each run
-    isotope_name_d = f'{isotope[:2]}d' # Pad or Thd
-    isotope_name_p = f'{isotope[:2]}p' # Pap or Thp
+    isotope_name_d = f'{tuning_target[:2]}d' # Pad or Thd
+    isotope_name_p = f'{tuning_target[:2]}p' # Pap or Thp
 
     isotope_d_df = pd.read_csv(f"{validation_data_path}/{isotope_name_d}_df.csv")
     isotope_p_df = pd.read_csv(f"{validation_data_path}/{isotope_name_p}_df.csv")
     isotope_df = isotope_d_df
 
-    mae_sim_dic: dict[str, dict[str, float]] = {isotope: {}}
+    mae_sim_dic: dict[str, dict[str, float]] = {tuning_target: {}}
     param_ref_dic: dict[str, dict[str, float]] = {}
     ratio_dic: dict[str, dict[str, float]] = {}
 
@@ -126,12 +126,12 @@ def score_isotope(isotope: str, parameter_list: list[str],
         })
 
         proxycop = model_xr[sim].isel(time=-1)
-        var_model = conv_dpm_bq(proxycop, isotope)
-        isotope_df[f'{isotope}_bern3d'] = loladf.apply(lambda row: extract_pad_value(row, var_model), axis=1)
+        var_model = conv_dpm_bq(proxycop, tuning_target)
+        isotope_df[f'{tuning_target}_bern3d'] = loladf.apply(lambda row: extract_pad_value(row, var_model), axis=1)
 
-        abs_err = abs(isotope_df[f"{isotope}_obs"] - isotope_df[f"{isotope}_bern3d"])
-        weight_err = abs_err / isotope_df[f"{isotope}_std"]
-        mae_sim_dic[isotope][sim] = (weight_err.sum()) / ((1 / isotope_df[f"{isotope}_std"]).sum())
+        abs_err = abs(isotope_df[f"{tuning_target}_obs"] - isotope_df[f"{tuning_target}_bern3d"])
+        weight_err = abs_err / isotope_df[f"{tuning_target}_std"]
+        mae_sim_dic[tuning_target][sim] = (weight_err.sum()) / ((1 / isotope_df[f"{tuning_target}_std"]).sum())
         logging.info("MAE for %s", sim)
 
         for param in parameter_list:
@@ -147,16 +147,16 @@ def score_isotope(isotope: str, parameter_list: list[str],
     param_df[f"mae_{isotope_name_d.lower()}"] = param_df.index.map(mae_df[isotope_name_d])
     param_df[f"{isotope_name_p}/{isotope_name_d}_bern"] = param_df.index.map(pd.DataFrame(ratio_dic).T[f"{isotope_name_p}/{isotope_name_d}"])
     paratio_geotraces = isotope_p_df[f"{isotope_name_p}_obs"].mean() / isotope_d_df[f"{isotope_name_d}_obs"].mean()
-    param_df[f"{isotope[:2]}ratiodiff"] = abs(param_df[f"{isotope_name_p}/{isotope_name_d}_bern"] - paratio_geotraces)
+    param_df[f"{tuning_target[:2]}ratiodiff"] = abs(param_df[f"{isotope_name_p}/{isotope_name_d}_bern"] - paratio_geotraces)
 
     return param_df
 
 
-def score_temperature_salinity(target: str, parameter_list: list[str],
-                               model_xr: dict[str, xr.Dataset], sims: list[str],
-                               validation_data_path: str,
-                               parameter_files: list[str],
-                               log_files: list[str], **kwargs: float) -> pd.DataFrame:
+def score_temp_salt_amoc_ida(target: str, parameter_list: list[str],
+                             model_xr: dict[str, xr.Dataset], sims: list[str],
+                             validation_data_path: str,
+                             parameter_files: list[str],
+                             log_files: list[str], **kwargs: float) -> pd.DataFrame:
 
 
     # The observations of temperature and salinity are already gridded on the model grid
@@ -182,12 +182,6 @@ def score_temperature_salinity(target: str, parameter_list: list[str],
     obs_df_ida = ds_target["ida"].values
     sim_variable_name_ida = "ida"
 
-    # ensure target is a valid string
-    # Can have temp, salt, ida, amoc
-    assert target.lower() in ["temperature", "salinity", "temperature_salinity",
-                              "salinity_temperature", "temp_salt", "salt_temp"], \
-        f"Target must be either 'Temperature', 'Salinity', 'Temperature_Salinity', 'Salinity_Temperature', 'Temp_Salt' or 'Salt_Temp'."
-
     composite_scores: dict[str, float] = {}
     param_ref_dic: dict[str, dict[str, float]] = {}
 
@@ -197,7 +191,7 @@ def score_temperature_salinity(target: str, parameter_list: list[str],
         if simulation_finished(log_files[i]):
             error_temp = 0.0
             error_salt = 0.0
-            error_amoc = 0.0
+            error_amoc = 1.0
             error_ida = 0.0
 
             model_ds = model_xr[sim].isel(time=-1)
@@ -234,21 +228,22 @@ def score_temperature_salinity(target: str, parameter_list: list[str],
 
             # Calcualte difference in ideal age
             # ideal age is stored in the model output as ida and in the observations_ida.nc file as "ida"
-            sim_df = model_ds[sim_variable_name_ida].values
-            error_ida = nrmse(sim_df, obs_df_ida, weight)
+            if 'ida' in target.lower():
+                sim_df = model_ds[sim_variable_name_ida].values
+                error_ida = nrmse(sim_df, obs_df_ida, weight)
 
             # Calculate difference in AMOC strength
             # sim is the .nc file Bay_wind_00_000.00001765_full_ave.nc for which we want to subsitute the _full_ave.nc for _timeseries_ave.nc
             if target_amoc is None:
                 target_amoc = 15.5
-
             target_amoc_min = target_amoc - 0.5
             target_amoc_max = target_amoc + 0.5
 
-            amoc_sim = sim.replace("_full_ave.nc", "_timeseries_ave.nc")
-            ds_amoc = xr.open_dataset(amoc_sim, decode_times=False)
-            sim_amoc = ds_amoc['OPSIA_max'][-1].values
-            error_amoc = 1 + (abs(sim_amoc - target_amoc)/target_amoc if sim_amoc < target_amoc_min or sim_amoc > target_amoc_max else 0.0)
+            if 'amoc' in target.lower():
+                amoc_sim = sim.replace("_full_ave.nc", "_timeseries_ave.nc")
+                ds_amoc = xr.open_dataset(amoc_sim, decode_times=False)
+                sim_amoc = ds_amoc['OPSIA_max'][-1].values
+                error_amoc = 1 + (abs(sim_amoc - target_amoc)/target_amoc if sim_amoc < target_amoc_min or sim_amoc > target_amoc_max else 0.0)
 
             total_error = error_amoc*(error_temp + error_salt  + error_ida)
             if total_error > 10:
@@ -427,8 +422,8 @@ def calculate_score_df(target: str, parameter_list: list[str],
         param_df = score_isotope(parameter_list, model_xr, sims, validation_data_path,
                                  parameter_files, log_files)
 
-    elif any(t in target.lower() for t in ["temp", "salt"]):
-        param_df = score_temperature_salinity(target, parameter_list, model_xr,
+    elif any(t in target.lower() for t in ["temp", "salt", 'amoc', 'ida']):
+        param_df = score_temp_salt_amoc_ida(target, parameter_list, model_xr,
                                               sims, validation_data_path, parameter_files,
                                               log_files, **kwargs)
 

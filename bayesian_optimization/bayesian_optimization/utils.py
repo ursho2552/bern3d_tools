@@ -47,7 +47,7 @@ class ConfigParameters:
     parameter_bounds (dict): Dictionary mapping parameter names to their bounds.
     parameter_file (str): Path to the parameter file.
     n_initialization (int): Number of initializations for the optimizer.
-    isotope (str): Isotope type ("Pad" or "Thd").
+    tuning_target (str): Target variables of the tuning.
     surrogate_type (str): Type of surrogate model to use.
     acquisition_type (str): Type of acquisition function to use.
     batchsize (int): Batch size for the optimizer.
@@ -76,7 +76,6 @@ class ConfigParameters:
     bern3d_f90: bool
     bern3d_executable_name: str
     bern3d_template: str
-    initialization_file: str
 
     simulation_name_restart: str
     output_files_restart: str
@@ -98,7 +97,7 @@ class ConfigParameters:
     bern3d_restart_files: str
 
     initialization_type: str
-    isotope: str
+    tuning_target: str
     n_initialization: int
     surrogate_type: str
     acquisition_type: str
@@ -142,9 +141,6 @@ def check_configuration(config_dataclass: ConfigParameters) -> ConfigParameters:
         os.makedirs(config_dataclass.output_dir_optimizer)
     if os.path.exists(config_dataclass.output_files_bern3d) is False:
         os.makedirs(config_dataclass.output_files_bern3d)
-
-    if config_dataclass.initialization_file == "None":
-        config_dataclass.initialization_file = None
 
     # check if the time is in the correct format
     assert config_dataclass.bern3d_script_time.count(":") == 2, "Time format is incorrect (hh:mm:ss)"
@@ -346,7 +342,6 @@ def create_new_parameter_file(config_dict: dict[str, Union[str, int, float]],
 
     return parameter_file_name
 
-
 def infer_type(value:str) -> Union[str, int, float]:
     """
     Infer the type of a value from a string.
@@ -372,7 +367,6 @@ def infer_type(value:str) -> Union[str, int, float]:
         return float(v)
 
     return v.strip('"').strip("'")
-
 
 def parse_to_dict(file_path: str) -> dict[str, Union[str, int, float]]:
     """
@@ -429,8 +423,6 @@ def adapt_dictionary(config_dict: dict[str, Union[str, int, float]],
 
     return config_dict
 
-
-
 def setup_run_directory(template_dir: str, executable_name: str,
                         new_name: str, work_dir: str,
                         restart_files: str) -> str:
@@ -468,96 +460,3 @@ def setup_run_directory(template_dir: str, executable_name: str,
                     shutil.copy(file, dest_file)
 
     return run_directory
-
-def create_new_simulation(new_name: str, old_name: str,
-                          template_path: str, work_directory: str,
-                          flag: Optional[bool] = False,
-                          bern3d_f90: Optional[bool] = False,
-                          initialization_file: Optional[str] = None,
-                          initialization_destination: Optional[str] = None) -> str:
-    """
-    Copies and renames parameter files based on the provided input and output names.
-
-    Parameters:
-    new_name (str): New name for the simulation.
-    old_name (str): Old name of the simulation in the template.
-    template_path (str): Path to the template directory with Bern3d model.
-    work_directory (str): Path to the work directory.
-    flag (bool): Flag to indicate if the parameter files should be removed.
-    bern3d_f90 (bool): Flag to indicate if the F90 version of Bern3D is used (True) or the Bern3D-V3 (False).
-    initialization_file (str): Path to the initialization file.
-    initialization_destination (str): Path to the destination for the initialization file.
-
-    Returns:
-    str: Path to the new simulation
-    """
-    if bern3d_f90:
-
-        # copy the whole directory
-        new_simulation_path = Path(work_directory) / f"run_{new_name}"
-        shutil.copytree(template_path, new_simulation_path, dirs_exist_ok=True)
-
-        # Replace old_name with new_name in specific files
-        files_to_edit = ["parallel.sh", "parallel_investor.sh", f"{old_name}.main.parameter"]
-        for file_name in files_to_edit:
-            file_path = new_simulation_path / file_name
-            if file_path.exists():
-                with file_path.open('r', encoding='utf-8') as file:
-                    content = file.read()
-                content = content.replace(old_name, new_name)
-                with file_path.open('w', encoding='utf-8') as file:
-                    file.write(content)
-            else:
-                logging.warning("%s not found!", file_name)
-
-        # Rename files that start with old_name
-        for file in new_simulation_path.glob(f"{old_name}*"):
-            new_file_name = file.name.replace(old_name, new_name)
-            file.rename(new_simulation_path / new_file_name)
-            logging.info("Renamed: %s -> %s", file, new_simulation_path / new_file_name)
-
-    else:
-
-        # copy the whole directory
-        new_simulation_path = Path(work_directory) / f"run_{new_name}"
-        shutil.copytree(template_path, new_simulation_path, dirs_exist_ok=True)
-
-        if len(new_name) == 10 and len(old_name) == 10:
-
-            for x in new_simulation_path.glob(f"{old_name}*"):
-                parts = x.name.split('.')
-                if len(parts) >= 3:
-                    shutil.move(x, f"{new_simulation_path}/{new_name}.{parts[1]}.{parts[2]}")
-            try:
-                (new_simulation_path / f"{new_name}..").unlink()
-                (new_simulation_path / f"{new_name}.out.").unlink()
-            except FileNotFoundError:
-                pass
-        else:
-            raise ValueError("ERROR: both names have to be 10 characters long")
-
-        if flag:
-            for suffix in ["forcing.parameter", "sed.parameter", "fw.parameter", "lpj.parameter", "lpj.filenames", "pisces.parameter"]:
-                try:
-                    os.remove(f"{new_simulation_path}/{new_name}.{suffix}")
-                except FileNotFoundError:
-                    pass
-
-        # make a copy of the executable
-        shutil.copy(f"{template_path}/{old_name}", f"{new_simulation_path}/{new_name}")
-        # remove the files with the old name
-        for file in new_simulation_path.glob(f"{old_name}*"):
-            os.remove(file)
-
-    if initialization_file is not None and initialization_destination is not None:
-        # if initialization file does not exist in destination, copy it
-        file_name = Path(initialization_file).name
-        if not os.path.exists(f"{initialization_destination}/{file_name}"):
-            shutil.copy(initialization_file, initialization_destination)
-
-    # for some strange reason, Bern3d-v3 needs the input directory...
-    if not os.path.exists(f"{work_directory}/input"):
-        input_directory_path = Path(template_path).parent / "input"
-        shutil.copytree(input_directory_path, f"{work_directory}/input", dirs_exist_ok=True)
-
-    return new_simulation_path

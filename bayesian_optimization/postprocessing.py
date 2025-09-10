@@ -36,7 +36,7 @@ def main(configuration_file, simulation_names) -> None:
     # Load the parameter iteration and optimizer
     # Check if the file exists
     first_iteration = False
-    if not os.path.exists(f"{my_config.output_dir_optimizer}/{my_config.isotope}_df.csv"):
+    if not os.path.exists(f"{my_config.output_dir_optimizer}/{my_config.tuning_target}_df.csv"):
         first_iteration = True
 
     with open(f"{my_config.output_dir_optimizer}/optimizer.pkl",'rb') as my_optimizer_file:
@@ -51,7 +51,7 @@ def main(configuration_file, simulation_names) -> None:
 
     parameter_list = list(my_config.parameter_bounds.keys())
     new_df, my_optimizer = bo.compute_and_tell_optimizer(optimizer = my_optimizer,
-                                                target = my_config.isotope,
+                                                target = my_config.tuning_target,
                                                 parameter_list = parameter_list,
                                                 simulation_dict = simulation_dictionary,
                                                 validation_data_path = my_config.validation_data_path,
@@ -65,12 +65,12 @@ def main(configuration_file, simulation_names) -> None:
         my_optimizer.stable_iterations = 0
     else:
         # Load the existing dataframe
-        current_df = pd.read_csv(f"{my_config.output_dir_optimizer}/{my_config.isotope}_df.csv",
+        current_df = pd.read_csv(f"{my_config.output_dir_optimizer}/{my_config.tuning_target}_df.csv",
                                  index_col=0)
 
         updated_df = pd.concat([current_df, new_df])
 
-    updated_df.to_csv(f"{my_config.output_dir_optimizer}/{my_config.isotope}_df.csv")
+    updated_df.to_csv(f"{my_config.output_dir_optimizer}/{my_config.tuning_target}_df.csv")
 
     #update last error of optimizer to check stability
     if my_optimizer.get_result().fun < my_optimizer.last_error:

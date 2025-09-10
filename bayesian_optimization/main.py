@@ -80,14 +80,14 @@ def main(configuration_file: str, current_iteration: int, email: str) -> None:
             # adapt how targets are passed to compute_and_tell_optimizer, since they should be passed as kwargs
 
             initial_df, my_optimizer = bo.compute_and_tell_optimizer(optimizer = my_optimizer,
-                                                                     target = my_config.isotope,
+                                                                     target = my_config.tuning_target,
                                                                      parameter_list = parameter_list,
                                                                      simulation_dict = simulation_dictionary,
                                                                      validation_data_path = my_config.validation_data_path,
                                                                      parameter_file_template = my_config.bern3d_parameter_file,
                                                                      **my_config.target_values)
 
-            initial_df.to_csv(f"{my_config.output_dir_optimizer}/{my_config.isotope}_df_simulations.csv")
+            initial_df.to_csv(f"{my_config.output_dir_optimizer}/{my_config.tuning_target}_df_simulations.csv")
 
     else:
         logging.info("Loading the optimizer from the previous iteration")
@@ -141,8 +141,8 @@ def main(configuration_file: str, current_iteration: int, email: str) -> None:
                                              parameter=parameter_names,
                                              factor=1, new_value=next_parameter)
         # Create new parameter file
-        new_param_file = bo.create_new_parameter_file(config_dict=parameter_dict,
-                                                parameter_file_name=param_file)
+        _ = bo.create_new_parameter_file(config_dict=parameter_dict,
+                                         parameter_file_name=param_file)
 
         # run the new simulation
         model_job_id = shared_utils.submit_job(script_template=my_config.bern3d_script,
