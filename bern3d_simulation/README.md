@@ -16,7 +16,6 @@ This module provides a framework for running Bern3D model simulations with robus
 - [Troubleshooting](#troubleshooting)
 - [Contributing](#contributing)
 - [License](#license)
-- [Acknowledgements](#acknowledgements)
 
 ---
 

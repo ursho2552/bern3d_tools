@@ -16,6 +16,7 @@ This module provides a framework for performing **Bayesian optimization** of mod
 - [Troubleshooting](#troubleshooting)
 - [Contributing](#contributing)
 - [License](#license)
+- [Acknowledgements](#acknowledgements)
 
 ---
 

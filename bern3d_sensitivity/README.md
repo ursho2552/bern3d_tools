@@ -16,7 +16,6 @@ This module provides a framework for performing **sensitivity analysis** of mode
 - [Troubleshooting](#troubleshooting)
 - [Contributing](#contributing)
 - [License](#license)
-- [Acknowledgements](#acknowledgements)
 
 ---
 
