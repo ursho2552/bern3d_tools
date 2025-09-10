@@ -1,96 +1,129 @@
-# Bern3D Tools
+# bern3d_tools
 
-The Bern3D Tools repository contains various tools and scripts for working with the Bern3D climate model. This repository is organized into different components, each with its own specific functionality. To use the tools you will need to create your own pyhton environment.
+A modular Python toolkit for running, managing, and analyzing Bern3D model simulations.
+This repository provides a unified framework for simulation management, sensitivity analysis, Bayesian optimization, spinup workflows, and NetCDF compression, all tailored for Bern3D but adaptable to similar models.
 
-To setup your python environment on UBELIX, you can follow these steps:
+---
 
-1. On the login node load the Anaconda module by running `module load Anaconda3`
-2. Configure the current session to work propertly with conda by running: `eval "$(conda shell.bash hook)"`
-3. Create your environment by running `conda env create -f requirements.yml`
+## Table of Contents
 
-The last step will create a conda environment called py3_bern_tools, which you can use for running the compression scripts. You can test this environment by calling `conda activate py3_bern_tools`.
+- [Overview](#overview)
+- [Repository Structure](#repository-structure)
+- [Modules](#modules)
+  - [Shared Utilities](#shared-utilities)
+  - [Simulation Module](#simulation-module)
+  - [Sensitivity Analysis Module](#sensitivity-analysis-module)
+  - [Bayesian Optimization Module](#bayesian-optimization-module)
+  - [Spinup Module](#spinup-module)
+  - [NCZIP Wrapper](#nczip-wrapper)
+- [Installation](#installation)
+- [Getting Started](#getting-started)
+- [Extending and Customization](#extending-and-customization)
+- [License](#license)
 
-## Components
+---
 
-### Bern3D Simulation
+## Overview
 
-The simulation module provides an easy way of running a simulation with automatic restart in case of timeout or crashes.
+`bern3d_tools` is designed to automate and streamline the workflow around the Bern3D model.
+It covers everything from launching and monitoring simulations (with automatic restarts), to parameter sensitivity analysis, Bayesian optimization, multi-phase spinup, and efficient NetCDF file compression.
 
-#### Features
+All modules are built to be interoperable and share a common set of utility functions for configuration, job submission, and file handling.
 
-- **Automated Job Submission**: Submits simulation jobs using SLURM with configurable parameters.
-- **Simulation Monitoring**: Checks the status of simulations to ensure they complete successfully.
-- **Restart Capability**: Automatically restarts simulations in case of failure or timeout.
-- **Configurable Workflow**: Uses a YAML configuration file to define paths, scripts, and parameters.
+---
 
-#### Usage
-To use the simulation module, adapt the `config.yaml` file to fit your compiled model and workspace.
+## Repository Structure
 
-Next, on the termial run:
-```bash
-python main.py --config_file ./config_files/config.yaml --initial_submission
+```
+bern3d_tools/
+│
+├── bayesian_optimization/   # Bayesian optimization of model parameters
+├── bern3d_sensitivity/      # Sensitivity analysis of model parameters
+├── bern3d_simulation/       # Robust simulation launching and monitoring
+├── bern3d_spinup/           # Multi-phase spinup workflow
+├── nczip_wrapper/           # NetCDF compression and verification tools
+├── shared/                  # Shared utility functions (used by other modules)
+└── README.md                # This file
 ```
 
-For more details, refer to the [Bern3D Simulation README](https://gitlab.climate.unibe.ch/bern3d/bern3d_tools/-/blob/main/bern3d_simulation/README.md?ref_type=heads)
+---
 
-### Bern3D Spinup
+## Modules
 
-The spinup module provides an easy way of performing the spinup for the Bern3d_F90 version of the model in a single command.
+### Shared Utilities
 
-#### Features
-- **Multi-phase Spinup:** Supports up to 3 spinup phases, each with its own configuration and SLURM script.
-- **Dynamic Directory Creation:** Automatically creates run directories for each spinup phase and copies the necessary template files.
-- **Configuration Management:** Reads configuration files in YAML format and validates paths and parameters.
-- **SLURM Job Submission:** Submits jobs for each spinup phase with optional dependencies between phases.
+- **Location:** `shared/`
+- **Purpose:** Common functions for configuration management, job submission, file handling, and parameter manipulation.
+- **Usage:** All other modules import and use these utilities for consistent workflows.
 
-#### Usage
-To use the spinup module, adapt the `spinup_setup.yaml` file to fit your compiled model. The runscripts used to run the model on UBELIX are configured to use the investor partition `job_icpu-poeppelmeier`.
+### Simulation Module
 
-Next, on the termial run:
-```bash
-python main.py --config_file <path_to_your_spinup_setup.yaml>
-```
+- **Location:** `bern3d_simulation/`
+- **Purpose:** Launches Bern3D simulations, monitors progress, and automatically restarts jobs if they fail or time out.
+- **Features:** Robust job management, restart logic, and easy integration with other modules.
 
-For more details, refer to the [Bern3D Spinup README](https://gitlab.climate.unibe.ch/bern3d/bern3d_tools/-/blob/main/bern3d_spinup/README.md?ref_type=heads)
+### Sensitivity Analysis Module
 
-### Bayesian Optimization
+- **Location:** `bern3d_sensitivity/`
+- **Purpose:** Automates parameter sensitivity analysis by running perturbed simulations and evaluating their impact.
+- **Features:** Batch job submission, automated evaluation, and summary of sensitivity metrics.
 
-The Bayesian Optimization module provides functionality for performing Bayesian optimization, particularly in the context of climate modeling and simulation management. It includes various functions for data loading, parameter updates, and simulation management.
+### Bayesian Optimization Module
 
-#### Features
-- Data loading and preprocessing
-- Parameter updates
-- Simulation management
-- Bayesian optimization
+- **Location:** `bayesian_optimization/`
+- **Purpose:** Performs Bayesian optimization of model parameters to match observational targets.
+- **Features:** Automated simulation setup, iterative optimization, and flexible configuration.
 
-#### Usage
-To use the Bayesian optimization module, adapt the config file to fit your simulation; see examples for Bern3D_F90 (config_bern3d_f90.yaml) and Bern3D_V3 (config_bern3d_v3.yaml).
+### Spinup Module
 
-Next, on the terminal run:
-```bash
-python main.py --configuration_name <path_to_your_config_file>
-```
-
-For more details, refer to the [Bayesian Optimization README](https://gitlab.climate.unibe.ch/bern3d/bern3d_tools/-/blob/main/bayesian_optimization/README.md?ref_type=heads)
+- **Location:** `bern3d_spinup/`
+- **Purpose:** Manages multi-phase spinup workflows, with phase-specific parameter overrides and sequential job dependencies.
+- **Features:** Automated setup and submission of sequential spinup jobs.
 
 ### NCZIP Wrapper
 
-The NCZIP Wrapper module provides scripts for compressing NetCDF files using the NCZIP tool. It includes a bash script for setting up the environment and running the compression, as well as Python scripts for additional processing and validation.
+- **Location:** `nczip_wrapper/`
+- **Purpose:** Compresses NetCDF files using `nczip` and verifies integrity with `ncequal`.
+- **Features:** Parallel compression, SLURM integration, and validation of compressed files.
 
-#### Features
-- Parallel compression of NetCDF files
-- Validation of compressed files
-- Customizable compression settings
+---
 
-#### Usage
+## Installation
 
-To use the NCWIP wrapper, run the `compress_output.sh` script with the appropriate arguments:
+Clone the repository and install dependencies for the modules you intend to use:
 
 ```bash
-./compress_output.sh <input_directory> [--nczip_script <path>] [--ncequal_script <path>] [--varnum <int>]
+git clone <repository-url>
+cd bern3d_tools
+# Install dependencies for each module as needed
+pip install -r bayesian_optimization/requirements.txt
+pip install -r bern3d_sensitivity/requirements.txt
+# etc.
 ```
 
-For more details, refer to the [NCZIP Wrapper README](https://gitlab.climate.unibe.ch/bern3d/bern3d_tools/-/blob/main/nczip_wrapper/README.md?ref_type=heads)
+---
 
-## Contributions
-Contributions are welcome! Please feel free to submit a pull request or open an issue for any improvements, additions, or bug fixes.
+## Getting Started
+
+1. **Choose a module** based on your workflow (simulation, sensitivity, optimization, spinup, or compression).
+2. **Prepare a YAML configuration file** using the examples provided in each module’s `config_files/` directory.
+3. **Run the main script** for your chosen module (see each module’s README for details).
+4. **Monitor outputs and logs** in your specified work directories.
+
+<!-- !All modules are designed to be interoperable. For example, the optimization and sensitivity modules use the simulation module to launch and monitor model runs. -->
+
+---
+
+## Extending and Customization
+
+- All modules are modular and can be adapted for new workflows, schedulers, or models.
+- Shared utilities can be extended for new file formats, job types, or parameter conventions.
+- Contributions and improvements are welcome!
+
+---
+
+## License
+
+This project is licensed under the MIT License. See the LICENSE file for details.
+
+---
