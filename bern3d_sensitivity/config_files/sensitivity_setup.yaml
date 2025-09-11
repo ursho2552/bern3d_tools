@@ -24,8 +24,8 @@ target_field:
 # Work directory
 work_directory: "/storage/scratch/users/uh24x373/sensitivity_Fe/"
 # Path to the sbatch script
-bern3d_run_script: "../shared/runscripts/run_bern3d_f90_omp_8cores.sh"
-evaluation_script: "./runscripts/run_evaluation.sh"
+bern3d_run_script: "/storage/homefs/uh24x373/bgc_bern/bern3d_tools/shared/runscripts/run_bern3d_f90_omp_8cores.sh"
+evaluation_script: "/storage/homefs/uh24x373/bgc_bern/bern3d_tools/bern3d_sensitivity/runscripts/run_evaluation.sh"
 main_script_path: "/storage/homefs/uh24x373/bgc_bern/bern3d_tools/bern3d_sensitivity/"
 # Time
 time_bern3d: "10:00:00"
