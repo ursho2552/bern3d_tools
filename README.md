@@ -90,16 +90,14 @@ bern3d_tools/
 
 ## Installation
 
-Clone the repository and install dependencies for the modules you intend to use:
+The Bern3D Tools repository contains various tools and scripts for working with the Bern3D model. This repository is organized into different modules, each with its own specific functionality. To use the tools you will need to create your own pyhton environment. After cloning the repository, you can setup your python environment on UBELIX, by following these steps:
 
-```bash
-git clone <repository-url>
-cd bern3d_tools
-# Install dependencies for each module as needed
-pip install -r bayesian_optimization/requirements.txt
-pip install -r bern3d_sensitivity/requirements.txt
-# etc.
-```
+1. On the login node, load the Anaconda module by running `module load Anaconda3`
+2. Configure the current session to work properly with conda by running: `eval "$(conda shell.bash hook)"`
+3. Create your environment by running `conda env create -f requirements.yml`
+
+The last step will create a conda environment called py3_bern_tools, which you can use for running all modules. You can test this environment by calling `conda activate py3_bern_tools`.
+
 
 ---
 
