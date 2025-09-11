@@ -59,7 +59,6 @@ def main(configuration_file: str, email: str, analyze_runs: bool = False) -> Non
                     new_name = "Reference"
                     factor = 1.0
 
-                print(new_name, factor)
                 # Copy the template executable and parameter file
                 run_directory = shared_utils.setup_run_directory(template_dir=my_config.bern3d_template,
                                                 executable_name=my_config.bern3d_executable_name,
@@ -77,6 +76,7 @@ def main(configuration_file: str, email: str, analyze_runs: bool = False) -> Non
                     parameter_dict = shared_utils.adapt_dictionary(config_dict=parameter_dict,
                                                     parameter=parameter,
                                                     factor=factor)
+                    
                     # Create new parameter file
                     _ = shared_utils.create_new_parameter_file(config_dict=parameter_dict,
                                                                parameter_file_name=param_file)
@@ -92,8 +92,8 @@ def main(configuration_file: str, email: str, analyze_runs: bool = False) -> Non
 
         # Launch dependent job for evaluation
         command_line_arg = [f"{my_config.main_script_path}/{configuration_file}"]
-
         executable_name = f"{my_config.main_script_path}/main.py"
+
         _ = shared_utils.submit_job(script_template=my_config.evaluation_script,
                                     executable_name=executable_name,
                                     executable_path=my_config.work_directory,
@@ -114,9 +114,9 @@ def main(configuration_file: str, email: str, analyze_runs: bool = False) -> Non
 
 if __name__ == "__main__":
     # Usage:
-    # python main.py --configuration_name config_files/sensitivity_setup.yaml
+    # python main.py --config_file config_files/sensitivity_setup.yaml
     parser = argparse.ArgumentParser(description="Run sensitivity analysis for BERN3D model.")
-    parser.add_argument("--configuration_name", required=True,
+    parser.add_argument("--config_file", required=True,
                         type=str, help="Path to the configuration file.")
     parser.add_argument("--email", required=False, type=str,
                         help="Email address for notifications.")
@@ -128,4 +128,4 @@ if __name__ == "__main__":
     if args.email is None:
         args.email = shared_utils.get_user_email()
 
-    main(args.configuration_name, args.email, args.analyze_runs)
+    main(args.config_file, args.email, args.analyze_runs)
