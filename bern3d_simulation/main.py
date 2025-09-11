@@ -62,7 +62,7 @@ def main(config_file: str, initial_submission: bool, email: str) -> None:
 
     # Launch dependent job
     command_line_arguments = [my_config.config_file, "--restart", email]
-    executable_name = f"{my_config.main_script}/main.py"
+    executable_name = f"{my_config.main_script}"
 
     shared_utils.submit_job(my_config.python_script, executable_name,
                    my_config.main_script, my_config.time_python,

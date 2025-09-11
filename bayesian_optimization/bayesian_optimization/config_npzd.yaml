@@ -4,7 +4,7 @@
 config_file_path: "/storage/homefs/uh24x373/bgc_bern/bern3d_tools/bayesian_optimization/bayesian_optimization/config_npzd.yaml"
 
 # Provide the paths where this scripts can be found. They should all be in the directory of this module
-bern3d_script: "/storage/homefs/uh24x373/bgc_bern/bern3d_tools/bayesian_optimization/runscripts/run_bern3d_f90_sequential.sh"
+bern3d_script: "/storage/homefs/uh24x373/bgc_bern/bern3d_tools/shared/runscripts/run_bern3d_f90_omp_8cores.sh"
 postprocessing_script: "/storage/homefs/uh24x373/bgc_bern/bern3d_tools/bayesian_optimization/runscripts/run_postprocessing.sh"
 optimizer_script: "/storage/homefs/uh24x373/bgc_bern/bern3d_tools/bayesian_optimization/runscripts/run_optimizer.sh"
 python_scripts: "/storage/homefs/uh24x373/bgc_bern/bern3d_tools/bayesian_optimization/"

@@ -8,9 +8,9 @@ bern3d_restart_files: !!python/none
 work_directory: "/storage/scratch/users/uh24x373/sensitivity_analysis"
 # Path of the sbatch scripts (should be in the bern3d_tools)
 sbatch_script:
-  phase1: "runscripts/run_bern3d_f90_phase1.sh"
-  phase2: "runscripts/run_bern3d_f90_phase2.sh"
-  phase3: "runscripts/run_bern3d_f90_phase3.sh"
+  phase1: "../shared/runscripts/run_bern3d_f90_mpi_3het.sh"
+  phase2: "../shared/runscripts/run_bern3d_f90_mpi_3het.sh"
+  phase3: "../shared/runscripts/run_bern3d_f90_mpi_4het.sh"
 
 # Time to run the script
 time: "06:00:00"

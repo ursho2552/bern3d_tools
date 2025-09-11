@@ -9,9 +9,9 @@ work_directory: "/storage/scratch/users/uh24x373/test_restart/"
 simulation_name: "restart_test"
 
 # Path to the executables
-bern3d_submit_script: "/storage/homefs/uh24x373/bgc_bern/bern3d_tools/bern3d_simulation/runscripts/run_bern3d.sh"
-python_script: "/storage/homefs/uh24x373/bgc_bern/bern3d_tools/bern3d_simulation/runscripts/run_simulation_check.sh"
-main_script: "/storage/homefs/uh24x373/bgc_bern/bern3d_tools/bern3d_simulation/"
+bern3d_submit_script: "../shared/runscripts/run_bern3d_f90_mpi_3het.sh"
+python_script: "./runscripts/run_simulation_check.sh"
+main_script: "main.py"
 
 time_bern3d : "00:30:00"
 time_python : "00:05:00"

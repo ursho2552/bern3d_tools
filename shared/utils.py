@@ -284,7 +284,7 @@ def adapt_dictionary(config_dict: dict[str, Union[str, int, float]],
     for param, new_val in zip(parameter, new_value):
         original_value = config_dict[param]
         if isinstance(original_value, (int, float)):
-            if new_value is None:
+            if new_val is None:
                 config_dict[param] = factor*original_value
             else:
                 config_dict[param] = new_val

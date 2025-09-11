@@ -33,6 +33,7 @@ ulimit -s unlimited
 export OMP_STACKSIZE=32M
 export OMP_PROC_BIND=close
 export I_MPI_COMPATIBILITY=4
+export HDF5_USE_FILE_LOCKING=FALSE
 
 srun --het-group=0 --partition=epyc2 --ntasks=1 --cpus-per-task=1 --export=all ./$SLURM_JOB_NAME : \
 --het-group=1 --partition=icpu-poeppelmeier --ntasks=1 --cpus-per-task=6 --export=all ./$SLURM_JOB_NAME : \

@@ -21,22 +21,16 @@
 #SBATCH --qos=job_cpu
 
 # Biogeochemistry task (OpenMP enabled)
-##SBATCH hetjob
-##SBATCH --cpus-per-task=1 --mem-per-cpu=2g --ntasks=1
-##SBATCH --partition=icpu-poeppelmeier
-##SBATCH --qos=job_icpu-poeppelmeier
+#SBATCH hetjob
+#SBATCH --cpus-per-task=1 --mem-per-cpu=2g --ntasks=1
+#SBATCH --partition=icpu-poeppelmeier
+#SBATCH --qos=job_icpu-poeppelmeier
 
 # Sediment task
-##SBATCH hetjob
-##SBATCH --cpus-per-task=1 --mem-per-cpu=2g --ntasks=1
-##SBATCH --partition=epyc2
-##SBATCH --qos=job_cpu
-
-# Ice-sheet (CISM) task
-##SBATCH hetjob
-##SBATCH --cpus-per-task=1 --mem-per-cpu=3g --ntasks=12
-##SBATCH --partition=epyc2
-##SBATCH --qos=job_cpu
+#SBATCH hetjob
+#SBATCH --cpus-per-task=1 --mem-per-cpu=2g --ntasks=1
+#SBATCH --partition=epyc2
+#SBATCH --qos=job_cpu
 
 #SBATCH --output="%x.out"
 #SBATCH --error="%x.out"
@@ -54,8 +48,10 @@ export I_MPI_COMPATIBILITY=4
 export HDF5_USE_FILE_LOCKING=FALSE
 
 srun --het-group=0 --partition=epyc2 --ntasks=1 --cpus-per-task=1 --export=all ./$SLURM_JOB_NAME : \
-     --het-group=1 --partition=icpu-poeppelmeier --ntasks=1 --cpus-per-task=6 --export=all ./$SLURM_JOB_NAME : \
-     --het-group=2 --partition=epyc2 --ntasks=1 --cpus-per-task=1 --export=all ./$SLURM_JOB_NAME > $SLURM_JOB_NAME.out 2>&1
+--het-group=1 --partition=icpu-poeppelmeier --ntasks=1 --cpus-per-task=6 --export=all ./$SLURM_JOB_NAME : \
+--het-group=2 --partition=epyc2 --ntasks=1 --cpus-per-task=1 --export=all ./$SLURM_JOB_NAME : \
+--het-group=3 --partition=icpu-poeppelmeier --ntasks=1 --cpus-per-task=1 --export=all ./$SLURM_JOB_NAME : \
+--het-group=4 --partition=epyc2--ntasks=1 --cpus-per-task=1 --export=all ./$SLURM_JOB_NAME > $SLURM_JOB_NAME.out 2>&1
 
 ERR=$?
 echo "Error code: $ERR"
