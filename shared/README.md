@@ -77,6 +77,19 @@ import bern3d_tools.shared.utils as shared_utils
 - **create_new_parameter_file(config_dict, parameter_file_name)**
   Writes a configuration dictionary to a new parameter file.
 
+### Shared Runscripts
+
+The `runscripts/` directory contains pre-configured SLURM scripts for different Bern3D execution modes:
+
+- **run_bern3d_f90_omp_8cores.sh** — OpenMP execution on 8 cores
+- **run_bern3d_f90_mpi_3het.sh** — MPI execution with 3 heterogeneous tasks (I/O, Ocean, Atmosphere)
+- **run_bern3d_f90_mpi_4het.sh** — MPI execution with 4 heterogeneous tasks (adds Biogeochemistry)
+- **run_bern3d_f90_mpi_5het.sh** — MPI execution with 5 heterogeneous tasks (adds Sediment)
+- **run_bern3d_f90_mpi_6het.sh** — MPI execution with 6 heterogeneous tasks (adds Ice-sheet/CISM)
+- **run_bern3d_v3_omp_6cores.sh** — Bern3D-v3 execution on 6 cores
+
+These scripts handle module loading, environment variables, and proper SLURM configuration for the University of Bern cluster environment.
+
 ---
 
 ## Usage
