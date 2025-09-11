@@ -91,11 +91,11 @@ if __name__ in "__main__":
     # python postprocessing.py --configuration_name bayesian_optimization/config_new.yaml --simulation_name NPZD_00_000,NPZD_01_000,NPZD_02_000,NPZD_03_000,NPZD_04_000,NPZD_05_000,NPZD_06_000,NPZD_07_000,NPZD_08_000,NPZD_09_000,NPZD_10_000,NPZD_11_000,NPZD_12_000,NPZD_13_000,NPZD_14_000,NPZD_15_000,NPZD_16_000,NPZD_17_000,NPZD_18_000,NPZD_19_000,NPZD_20_000,NPZD_21_000,NPZD_22_000,NPZD_23_000,NPZD_24_000,NPZD_25_000,NPZD_26_000,NPZD_27_000,NPZD_28_000,NPZD_29_000
     logging.basicConfig(level=logging.INFO)
     parser = argparse.ArgumentParser(description='Postprocessing for Bayesian optimization module')
-    parser.add_argument('--configuration_name', required=True, type=str,
+    parser.add_argument('--config_file', required=True, type=str,
                         help='Name of the configuration file')
     parser.add_argument('--simulation_name', required=True, type=str,
                         help='Name of the simulation files from which the results are fetched')
 
     command_line_args = parser.parse_args()
 
-    main(command_line_args.configuration_name, command_line_args.simulation_name)
+    main(command_line_args.config_file, command_line_args.simulation_name)

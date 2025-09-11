@@ -395,6 +395,11 @@ def score_npzd(target: str, parameter_list: list[str], model_xr: dict[str, xr.Da
             print (f"error_dic: {error_dic}, error_alk: {error_alk}, error_po4: {error_po4}, error_sio: {error_sio}")
             print (f"error_npp: {error_npp}, error_poc: {error_poc}, error_caco3: {error_caco3}, error_opal: {error_opal}")
 
+            if total_error > 20:
+                total_error = 1e6
+            elif total_error < 0:
+                total_error = 1e6
+
             composite_scores[sim] = total_error
 
         else:

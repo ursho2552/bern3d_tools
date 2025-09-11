@@ -15,7 +15,6 @@ if repo_root not in sys.path:
 import argparse
 import logging
 import pickle
-import time
 
 import numpy as np
 from skopt import Optimizer
@@ -150,12 +149,9 @@ def main(configuration_file: str, current_iteration: int, email: str) -> None:
                                         executable_path=new_simulation_path,
                                         time=my_config.bern3d_script_time,
                                         header_command=f"--mail-user={email}")
-        # wait for 2 seconds to avoid overloading the scheduler
-        time.sleep(2)
 
         my_simulation_ids.append(model_job_id)
         my_simulation_names.append(my_simulation_name)
-
 
     # Create and run dependent sbatch simulation for post-processing
     # command line arguments for the postprocessing script
@@ -197,11 +193,11 @@ def main(configuration_file: str, current_iteration: int, email: str) -> None:
 # ======================
 if __name__ in "__main__":
 
-    # python main.py --configuration_name bayesian_optimization/config_temperature.yaml
+    # python main.py --config_file bayesian_optimization/config_temperature.yaml
     # Parse command line arguments
     logging.basicConfig(level=logging.INFO)
     parser = argparse.ArgumentParser(description='Run bayesian optimization')
-    parser.add_argument('--configuration_name', required=True, type=str,
+    parser.add_argument('--config_file', required=True, type=str,
                         help='Path to the configuration file')
     parser.add_argument('--current_iteration', required=False, type=int, default=0,
                         help='Current iteration number (default 0)')
@@ -215,5 +211,5 @@ if __name__ in "__main__":
         command_line_args.email = shared_utils.get_user_email()
 
     np.random.seed(command_line_args.current_iteration)
-    main(command_line_args.configuration_name, command_line_args.current_iteration,
+    main(command_line_args.config_file, command_line_args.current_iteration,
          command_line_args.email)

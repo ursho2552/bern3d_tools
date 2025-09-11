@@ -15,4 +15,4 @@ PYTHON=py3_bern_tools
 
 conda activate $PYTHON
 
-python $SLURM_JOB_NAME --configuration_name $1 --current_iteration $2 --email $3
+python $SLURM_JOB_NAME --config_file $1 --current_iteration $2 --email $3
