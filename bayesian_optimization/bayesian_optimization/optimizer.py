@@ -568,8 +568,8 @@ def compute_and_tell_optimizer(optimizer: Optimizer, target: str,
         root_dir = Path(sim).parent.parent
         name_sim = Path(sim).name.split(".")[0]
         name_param = f"{name_sim}{parameter_file_template}"
-        parameter_files.append(f"{root_dir}/run/{name_param}")
-        log_files.append(f"{root_dir}/run/{name_sim}.out")
+        parameter_files.append(f"{root_dir}/run_{name_sim}/{name_param}")
+        log_files.append(f"{root_dir}/run_{name_sim}/{name_sim}.out")
 
     test_df = calculate_score_df(target, parameter_list, simulation_dict, simulation_names,
                                  validation_data_path, parameter_files, log_files, **kwargs)
