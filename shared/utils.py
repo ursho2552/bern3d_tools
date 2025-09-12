@@ -170,7 +170,8 @@ def copy_template_files(exec_name: str, new_name: str,
 
 def setup_run_directory(template_dir: str, executable_name: str,
                         new_name: str, work_dir: str,
-                        restart_files: str) -> str:
+                        restart_files: str,
+                        separate: bool = False) -> str:
 
     """
     Set up the run directory for a new simulation.
@@ -181,13 +182,15 @@ def setup_run_directory(template_dir: str, executable_name: str,
     new_name (str): New name for the simulation.
     work_dir (str): Path to the work directory.
     restart_files (str): Path to the restart files.
+    separate (bool): Whether to create a separate run directory for each simulation.
 
     Returns:
     str: Path to the run directory.
     """
 
     # Create a run directory
-    run_directory = os.path.join(work_dir, 'run')
+    run_directory_name = 'run' if not separate else f'run_{new_name}'
+    run_directory = os.path.join(work_dir, run_directory_name)
     results_directory = os.path.join(work_dir, 'results')
     os.makedirs(run_directory, exist_ok=True)
     os.makedirs(results_directory, exist_ok=True)

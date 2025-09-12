@@ -123,32 +123,33 @@ def main(configuration_file: str, current_iteration: int, email: str) -> None:
         # Create new simulation files with runname equal to my_simulation_name
         my_simulation_name = f"{my_config.simulation_name_bern3d}_{str(batch_number).zfill(2)}_{str(current_iteration).zfill(3)}"
         # Support for Bern3D_F90 only
-        new_simulation_path = bo.setup_run_directory(template_dir=my_config.bern3d_template,
-                                                  executable_name=my_config.bern3d_executable_name,
-                                                  new_name=my_simulation_name,
-                                                  work_dir=my_config.work_directory,
-                                                  restart_files=my_config.bern3d_restart_files)
+        new_simulation_path = shared_utils.setup_run_directory(template_dir=my_config.bern3d_template,
+                                                               executable_name=my_config.bern3d_executable_name,
+                                                               new_name=my_simulation_name,
+                                                               work_dir=my_config.work_directory,
+                                                               restart_files=my_config.bern3d_restart_files,
+                                                               separate=True)
 
         # update parameter file
         param_file = f"{new_simulation_path}/{my_simulation_name}{my_config.bern3d_parameter_file}"
-        parameter_dict = bo.parse_to_dict(file_path=param_file)
+        parameter_dict = shared_utils.parse_to_dict(file_path=param_file)
 
         # Adapt value
         # paramter list is taken from parameter_bounds keys
         parameter_names = list(my_config.parameter_bounds.keys())
-        parameter_dict = bo.adapt_dictionary(config_dict=parameter_dict,
-                                             parameter=parameter_names,
-                                             factor=1, new_value=next_parameter)
+        parameter_dict = shared_utils.adapt_dictionary(config_dict=parameter_dict,
+                                                       parameter=parameter_names,
+                                                       factor=1, new_value=next_parameter)
         # Create new parameter file
-        _ = bo.create_new_parameter_file(config_dict=parameter_dict,
-                                         parameter_file_name=param_file)
+        _ = shared_utils.create_new_parameter_file(config_dict=parameter_dict,
+                                                   parameter_file_name=param_file)
 
         # run the new simulation
         model_job_id = shared_utils.submit_job(script_template=my_config.bern3d_script,
-                                        executable_name=my_simulation_name,
-                                        executable_path=new_simulation_path,
-                                        time=my_config.bern3d_script_time,
-                                        header_command=f"--mail-user={email}")
+                                               executable_name=my_simulation_name,
+                                               executable_path=new_simulation_path,
+                                               time=my_config.bern3d_script_time,
+                                               header_command=f"--mail-user={email}")
 
         my_simulation_ids.append(model_job_id)
         my_simulation_names.append(my_simulation_name)
