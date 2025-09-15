@@ -8,7 +8,7 @@ default values (all boolean are set to False, all integers are set to 0, and all
 override_dictionary = {
     "phase_1": {
         'ndtyear': 144,
-        'runYears': 10,
+        'runYears': 6000,
         'npstp_years': 10,
         'iwstp_years': 10,
         'itstp_years': 1,
