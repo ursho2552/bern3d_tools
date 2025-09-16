@@ -1,0 +1,12 @@
+name: py3_regrid
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - xarray
+  - numpy
+  - matplotlib
+  - esmpy
+  - xesmf
+  - netcdf4
+  - scipy
