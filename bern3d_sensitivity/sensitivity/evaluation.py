@@ -33,16 +33,18 @@ def analyze_sensitivity_results(config: ConfigFile,
     for variable, filename_suffix in config.target_field.items():
         ref_file = results_dir / f"Reference{filename_suffix}"
         if ref_file.exists():
-            ds = xr.open_dataset(ref_file, decode_times=False)
-            if variable in ds:
-                # Get last timestep
-                ref_data = ds[variable].isel(time=-1)
-                reference_data[variable] = ref_data
-                logging.info(f"Loaded reference data for {variable}: shape {ref_data.shape}")
-            else:
-                logging.warning(f"Variable {variable} not found in {ref_file}")
+            with xr.open_dataset(ref_file, decode_times=False) as ds:
+                if variable in ds:
+                    # Get last timestep
+                    ref_data = ds[variable].isel(time=-1)
+                    reference_data[variable] = ref_data
+                    logging.info(f"Loaded reference data for {variable}: shape {ref_data.shape}")
+                else:
+                    # End execution if reference variable is missing
+                    raise ValueError(f"Reference variable {variable} missing in {ref_file}")
         else:
-            logging.warning(f"Reference file {ref_file} not found")
+            # End execution if reference file is missing
+            raise FileNotFoundError(f"Reference file {ref_file} not found")
 
     # Analyze each parameter variation
     for parameter in parameter_list:
