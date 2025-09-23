@@ -81,24 +81,21 @@ def analyze_sensitivity_results(config: ConfigFile,
 
                 try:
                     # Load the dataset
-                    ds = xr.open_dataset(file_path, decode_times=False)
+                    with xr.open_dataset(file_path, decode_times=False) as ds:
+                        if variable not in ds:
+                            logging.warning(f"Variable {variable} not found in {file_path}")
+                            continue
 
-                    if variable not in ds:
-                        logging.warning(f"Variable {variable} not found in {file_path}")
-                        continue
+                        # Get last timestep
+                        var_data = ds[variable].isel(time=-1)
+                        ref_data = reference_data[variable]
 
-                    # Get last timestep
-                    var_data = ds[variable].isel(time=-1)
-                    ref_data = reference_data[variable]
+                        # Calculate sensitivity metrics
+                        sensitivity_metrics = calculate_sensitivity_metrics(
+                            var_data, ref_data, parameter, variation, variable
+                        )
 
-                    # Calculate sensitivity metrics
-                    sensitivity_metrics = calculate_sensitivity_metrics(
-                        var_data, ref_data, parameter, variation, variable
-                    )
-
-                    results.append(sensitivity_metrics)
-
-                    ds.close()
+                        results.append(sensitivity_metrics)
 
                 except Exception as e:
                     logging.error(f"Error processing {file_path}: {e}")
