@@ -60,7 +60,7 @@ def main(configuration_file, simulation_names) -> None:
 
     if first_iteration:
         updated_df = new_df
-        my_optimizer.first_error = my_optimizer.get_result().fun
+        my_optimizer.first_error = my_optimizer.get_result().func_vals.max()
         my_optimizer.last_error = my_optimizer.first_error
         my_optimizer.stable_iterations = 0
     else:
