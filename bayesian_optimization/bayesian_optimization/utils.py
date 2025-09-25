@@ -179,7 +179,7 @@ def check_valid_target(target: str) -> None:
     """
     allowed_isotopes = ["Pad", "Thd"]
     allowed_vars = ["temp", "salt", "amoc", "ida"]
-    allowed_npzd = ["dic", "alk", "po4", "sio", "poc", "caco3", "opal", "npp"]
+    allowed_npzd = ["dic", "alk", "po4", "sio", "no3", "poc", "caco3", "opal", "npp"]
 
     # Single isotope
     if target in allowed_isotopes:
@@ -284,4 +284,3 @@ def update_parameter_file(next_parameters: list[float], bgc_parameter_file: str,
         file.writelines(lines)
 
     logging.info("Updated parameter file")
-

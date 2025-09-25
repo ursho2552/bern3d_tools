@@ -98,17 +98,24 @@ def main(configuration_file: str, current_iteration: int, email: str) -> None:
     #######################################
     # Vary the number of points to test based on the current iteration and error relative to the
     # first error (if available)
+    strategy = "cl_max"
     if not 'first_error' in  dir(my_optimizer):
         logging.info("Asking for initial parameters to test")
         num_points = my_config.batchsize
         my_optimizer.stable_iterations = 0
         my_optimizer.max_stable_iterations = my_config.max_stable_iterations
+
     else:
         logging.info("Asking for next parameters to test in iteration %d", current_iteration)
         num_points = my_config.batchsize*(my_optimizer.get_result().fun/my_optimizer.first_error)
         num_points = max(int(num_points), 2)
+        fraction = (my_optimizer.get_result().fun/my_optimizer.first_error)
+        if fraction < 0.5:
+            strategy = "cl_mean"
+        elif fraction < 0.2:
+            strategy = "cl_min"
 
-    next_parameters = my_optimizer.ask(n_points=num_points)
+    next_parameters = my_optimizer.ask(n_points=num_points, strategy=strategy)
     # Save the optimizer
     with open(f"{my_config.output_dir_optimizer}/optimizer.pkl", 'wb') as my_optimizer_file:
         pickle.dump(my_optimizer, my_optimizer_file)

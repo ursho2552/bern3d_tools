@@ -307,6 +307,9 @@ def score_npzd(target: str, parameter_list: list[str], model_xr: dict[str, xr.Da
     obs_df_sio = ds_target["sio"].values
     sim_variable_name_sio = "SiO"
 
+    obs_df_no3 = ds_target["no3"].values
+    sim_variable_name_no3 = "NO3"
+
     # Can have dic, alk, po4, poc, caco3, opal, npp
     composite_scores: dict[str, float] = {}
     param_ref_dic: dict[str, dict[str, float]] = {}
@@ -318,6 +321,7 @@ def score_npzd(target: str, parameter_list: list[str], model_xr: dict[str, xr.Da
             error_alk = 0.0
             error_po4 = 0.0
             error_sio = 0.0
+            error_no3 = 0.0
             error_poc = 0.0
             error_caco3 = 0.0
             error_opal = 0.0
@@ -328,7 +332,7 @@ def score_npzd(target: str, parameter_list: list[str], model_xr: dict[str, xr.Da
             # Get weights for the model grid
             area = model_ds.area.values
 
-            # Calculate the MAE for temperature
+            # Calculate the MAE for targets
             if 'dic' in target.lower():
                 sim_df = model_ds[sim_variable_name_dic].values * 1000
                 error_dic = nrmse(sim_df, obs_df_dic, 1)
@@ -341,6 +345,9 @@ def score_npzd(target: str, parameter_list: list[str], model_xr: dict[str, xr.Da
             if 'sio' in target.lower():
                 sim_df = model_ds[sim_variable_name_sio].values * 1000
                 error_sio = nrmse(sim_df, obs_df_sio, 1)
+            if 'no3' in target.lower():
+                sim_df = model_ds[sim_variable_name_no3].values * 1000
+                error_no3 = nrmse(sim_df, obs_df_no3, 1)
 
             # Calculate difference in export value, pools, and NPP
             if target_poc is None:
@@ -385,7 +392,7 @@ def score_npzd(target: str, parameter_list: list[str], model_xr: dict[str, xr.Da
             # Combine errors. If dic, alk, po4, and sio are perfect or not used,
             # then the total error is just the export and NPP error. Else, the export and NPP error
             # are used as a multiplier for the other errors.
-            main_error = error_dic + error_alk  + error_po4 + error_sio
+            main_error = error_dic + error_alk  + error_po4 + error_sio + error_no3
             if main_error == 0:
                 total_error = bulk_errors - 1
             else:
@@ -449,7 +456,7 @@ def calculate_score_df(target: str, parameter_list: list[str],
                                               log_files, **kwargs)
 
     # but it might be a combination of many targets with dic, alk, po4, sio, poc, caco3, opal, npp
-    elif any(t in target.lower() for t in ["dic", "alk", "po4", "sio", "poc", "caco3", "opal", "npp"]):
+    elif any(t in target.lower() for t in ["dic", "alk", "po4", "sio" , "no3", "poc", "caco3", "opal", "npp"]):
         param_df = score_npzd(target, parameter_list, model_xr,
                               sims, validation_data_path, parameter_files,
                               log_files, **kwargs)
