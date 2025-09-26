@@ -110,9 +110,9 @@ def main(configuration_file: str, current_iteration: int, email: str) -> None:
         num_points = my_config.batchsize*(my_optimizer.get_result().fun/my_optimizer.first_error)
         num_points = max(int(num_points), 2)
         fraction = (my_optimizer.get_result().fun/my_optimizer.first_error)
-        if fraction < 0.5:
+        if fraction < 0.3:
             strategy = "cl_mean"
-        elif fraction < 0.2:
+        elif fraction < 0.1:
             strategy = "cl_min"
 
     next_parameters = my_optimizer.ask(n_points=num_points, strategy=strategy)
