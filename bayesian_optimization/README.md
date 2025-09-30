@@ -167,7 +167,7 @@ job_number: -1
 
 3. **Run the optimizer:**
    ```bash
-   python main.py --configuration_name path/to/your_config.yaml
+   python main.py --config_file path/to/your_config.yaml
    ```
    Optional arguments:
    - `--current_iteration`: Start from a specific iteration (default: 0)
