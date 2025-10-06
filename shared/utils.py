@@ -142,6 +142,10 @@ def copy_template_files(exec_name: str, new_name: str,
         if any(name.startswith(prefix) for prefix in exec_names if prefix != exec_name):
             continue
 
+        # Ignore parameter files in case executable is not present
+        if name.endswith('parameter') and not name.startswith(exec_name):
+            continue
+
         # Determine destination filename
         if name.startswith(exec_name):
             # rename file itself
