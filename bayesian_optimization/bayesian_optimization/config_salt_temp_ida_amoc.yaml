@@ -26,7 +26,7 @@ output_timescale_bern3d: "ave"
 wildcard_simulation: !!python/none
 
 # The path to the work directory (best to use scratch)
-work_directory: "/storage/scratch/users/uh24x373/Optimization_salt_temp_ida_amoc/"
+work_directory: "/storage/scratch/users/uh24x373/Optimization_wind/"
 # keep as None if the output should be in the workdirectory
 output_files_bern3d: !!python/none
 output_dir_optimizer: !!python/none
@@ -37,11 +37,11 @@ output_files_restart: !!python/none
 
 # For Bern3d-v3, the flag has to be set to False
 bern3d_f90: True
-template_name_bern3d: "RUNNAME"
-bern3d_template: "/storage/homefs/uh24x373/bgc_bern/optimize_wind_velocity/bern3d_f90/run/"
+bern3d_executable_name: "RUNNAME"
+bern3d_template: "/storage/homefs/uh24x373/bgc_bern/bern3d_f90/run/"
 
 # Path to the validation dataset
-validation_data_path: "/storage/homefs/uh24x373/bgc_bern/optimize_wind_velocity/bern3d_f90/run/"
+validation_data_path: "/storage/homefs/uh24x373/bgc_bern/bern3d_f90/run/"
 
 # The number of iterations to run the Bayesian optimization algorithm
 max_iterations: 100
@@ -57,7 +57,7 @@ target_values:
  target_npp: !!python/none
 
 # Path to file with parameters to be optimized
-parameter_file: ".ocn.parameter"
+bern3d_parameter_file: ".ocn.parameter"
 bern3d_restart_files: !!python/none
 
 parameter_bounds:
