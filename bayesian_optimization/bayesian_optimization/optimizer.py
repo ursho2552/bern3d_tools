@@ -168,7 +168,7 @@ def score_temp_salt_amoc_ida(target: str, parameter_list: list[str],
     target_amoc = kwargs.get('target_amoc', None)
 
     # Open the NetCDF observations file and convert target variable to DataFrame
-    target_file = f"{validation_data_path}/world_68x46.observations_ida.nc"
+    target_file = f"{validation_data_path}/world_68x46.observations.nc"
     assert os.path.exists(target_file), f"{target_file} file does not exist."
 
     ds_target = xr.open_dataset(target_file)
