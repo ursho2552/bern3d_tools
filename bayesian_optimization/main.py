@@ -135,7 +135,7 @@ def main(configuration_file: str, current_iteration: int, email: str) -> None:
                                                                new_name=my_simulation_name,
                                                                work_dir=my_config.work_directory,
                                                                restart_files=my_config.bern3d_restart_files,
-                                                               separate=True)
+                                                               separate=False)
 
         # update parameter file
         param_file = f"{new_simulation_path}/{my_simulation_name}{my_config.bern3d_parameter_file}"
