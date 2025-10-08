@@ -399,7 +399,7 @@ def score_npzd(target: str, parameter_list: list[str], model_xr: dict[str, xr.Da
                 total_error = bulk_errors*main_error
 
             print(f"Total error is {total_error}")
-            print (f"error_dic: {error_dic}, error_alk: {error_alk}, error_po4: {error_po4}, error_sio: {error_sio}")
+            print (f"error_dic: {error_dic}, error_alk: {error_alk}, error_po4: {error_po4}, error_sio: {error_sio}, error_no3: {error_no3}")
             print (f"error_npp: {error_npp}, error_poc: {error_poc}, error_caco3: {error_caco3}, error_opal: {error_opal}")
 
             if total_error > 20:
