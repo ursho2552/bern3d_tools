@@ -156,6 +156,9 @@ def copy_template_files(exec_name: str, new_name: str,
         # Copy if shared or specific to exec_name
         if name.startswith(exec_name) or not any(name.startswith(prefix) for prefix in exec_names):
             dest = work_dir / new_filename
+            if dest.exists():
+                logging.warning(f"File already exists, not copying: {name} -> {new_filename}")
+                continue
             shutil.copy2(file, dest)
             copied_files.append(dest)
             logging.warning(f"Copied: {name} -> {new_filename}")
@@ -284,9 +287,13 @@ def adapt_dictionary(config_dict: dict[str, Union[str, int, float]],
     if not isinstance(parameter, list):
         parameter = [parameter]
     if not isinstance(new_value, list):
-        new_value = [new_value]
+        if new_value is None:
+            new_value = [None]*len(parameter)
+        else:
+            new_value = [new_value]
 
-    assert len(parameter) == len(new_value), "Length of parameter and new_value must be the same"
+    if new_value is not None:
+        assert len(parameter) == len(new_value), "Length of parameter and new_value must be the same"
 
     for param, new_val in zip(parameter, new_value):
         original_value = config_dict[param]

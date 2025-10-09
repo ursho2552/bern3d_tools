@@ -107,9 +107,9 @@ def main(configuration_file: str, current_iteration: int, email: str) -> None:
 
     else:
         logging.info("Asking for next parameters to test in iteration %d", current_iteration)
-        num_points = my_config.batchsize*(my_optimizer.get_result().fun/my_optimizer.first_error)
+        fraction = max(1, my_optimizer.get_result().fun/my_optimizer.first_error)
+        num_points = my_config.batchsize*fraction
         num_points = max(int(num_points), 2)
-        fraction = (my_optimizer.get_result().fun/my_optimizer.first_error)
         if fraction < 0.3:
             strategy = "cl_mean"
         elif fraction < 0.1:
@@ -125,17 +125,33 @@ def main(configuration_file: str, current_iteration: int, email: str) -> None:
 
     my_simulation_ids = []
     my_simulation_names = []
+    batch_offset = 0
+    if current_iteration == 0 and not my_config.initialization_type == "simulation":
+        # extend next parameters by one to account for the reference simulation
+        next_parameters.insert(0,None)
+        batch_offset = 1
+
     for batch_number, next_parameter in enumerate(next_parameters):
 
-        # Create new simulation files with runname equal to my_simulation_name
-        my_simulation_name = f"{my_config.simulation_name_bern3d}_{str(batch_number).zfill(2)}_{str(current_iteration).zfill(3)}"
+        if next_parameter is None:
+            # first copy the template runscript to the work directory
+            my_simulation_name = "Reference"
+            template_dir = my_config.bern3d_template
+            executable_name = my_config.bern3d_executable_name
+            restart_files=my_config.bern3d_restart_files
+        else:
+            # Create new simulation files with runname equal to my_simulation_name
+            my_simulation_name = f"{my_config.simulation_name_bern3d}_{str(batch_number - batch_offset).zfill(2)}_{str(current_iteration).zfill(3)}"
+            template_dir = f"{my_config.work_directory}/run/"
+            executable_name = "Reference"
+            restart_files=None
+
         # Support for Bern3D_F90 only
-        new_simulation_path = shared_utils.setup_run_directory(template_dir=my_config.bern3d_template,
-                                                               executable_name=my_config.bern3d_executable_name,
+        new_simulation_path = shared_utils.setup_run_directory(template_dir=template_dir,
+                                                               executable_name=executable_name,
                                                                new_name=my_simulation_name,
                                                                work_dir=my_config.work_directory,
-                                                               restart_files=my_config.bern3d_restart_files,
-                                                               separate=False)
+                                                               restart_files=restart_files)
 
         # update parameter file
         param_file = f"{new_simulation_path}/{my_simulation_name}{my_config.bern3d_parameter_file}"

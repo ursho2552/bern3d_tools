@@ -4,6 +4,7 @@
 This is the optimizer script for the Bayesian optimization module.
 """
 import os
+
 import re
 import logging
 from typing import Union
@@ -510,22 +511,27 @@ def get_config_value(path: str, param: str):
     Returns:
     str or int or float: Value of the parameter.
     """
-
     with open(path, encoding='utf-8') as f:
         for line in f:
-            # strip comments and whitespace
             line = line.split('#', 1)[0].strip()
             if not line or '=' not in line:
                 continue
-
             key, raw = map(str.strip, line.split('=', 1))
             if key == param:
-                # infer numeric vs. string
-                if re.fullmatch(r'[+-]?\d+\.\d*([eE][+-]?\d+)?', raw):
-                    return float(raw)
-                if re.fullmatch(r'[+-]?\d+', raw):
-                    return int(raw)
-                return raw.strip('"').strip("'")
+                v = raw.strip()
+                if v.lower() in ('.true.', 'true'):
+                    return True
+                if v.lower() in ('.false.', 'false'):
+                    return False
+                if re.fullmatch(r'[+-]?\d+', v):
+                    return int(v)
+                if re.fullmatch(r'[+-]?\d*\.?\d*[eE][+-]?\d+', v):
+                    return float(v)
+                if re.fullmatch(r'[+-]?\d*\.\d*', v) and '.' in v:
+                    return float(v)
+
+                return v.strip('"').strip("'")
+
     raise KeyError(f"No parameter named {param!r} in {path!r}")
 
 def simulation_finished(log_path: str) -> bool:
@@ -565,7 +571,7 @@ def compute_and_tell_optimizer(optimizer: Optimizer, target: str,
         parameter_list = [parameter_list]
 
     simulation_names = list(simulation_dict.keys())
-    # construct the paramter file name
+    # construct the parameter file name
     # should be in the run directory of the simulation
 
     parameter_files = []

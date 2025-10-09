@@ -60,7 +60,14 @@ def main(configuration_file, simulation_names) -> None:
 
     if first_iteration:
         updated_df = new_df
-        my_optimizer.first_error = my_optimizer.get_result().func_vals.mean()
+        # check if index row of new_df contains the word Reference
+        if "Reference" in new_df.index[0]:
+            # use the error of the reference simulation as first error
+           first_error = new_df.iloc[0][-1]
+        else:
+            # use the mean of the function values as first error
+            first_error = my_optimizer.get_result().func_vals.mean()
+        my_optimizer.first_error = first_error
         my_optimizer.last_error = my_optimizer.first_error
         my_optimizer.stable_iterations = 0
     else:
@@ -88,7 +95,7 @@ def main(configuration_file, simulation_names) -> None:
 if __name__ in "__main__":
 
     # Parse command line arguments
-    # python postprocessing.py --configuration_name bayesian_optimization/config_new.yaml --simulation_name NPZD_00_000,NPZD_01_000,NPZD_02_000,NPZD_03_000,NPZD_04_000,NPZD_05_000,NPZD_06_000,NPZD_07_000,NPZD_08_000,NPZD_09_000,NPZD_10_000,NPZD_11_000,NPZD_12_000,NPZD_13_000,NPZD_14_000,NPZD_15_000,NPZD_16_000,NPZD_17_000,NPZD_18_000,NPZD_19_000,NPZD_20_000,NPZD_21_000,NPZD_22_000,NPZD_23_000,NPZD_24_000,NPZD_25_000,NPZD_26_000,NPZD_27_000,NPZD_28_000,NPZD_29_000
+    # python postprocessing.py --config_file bayesian_optimization/config_salt_temp_ida_amoc.yaml --simulation_name Reference,Test_00_000,Test_01_000,Test_02_000,Test_03_000,Test_04_000,Test_05_000,Test_06_000,Test_07_000,Test_08_000,Test_09_000,Test_10_000,Test_11_000,Test_12_000,Test_13_000,Test_14_000,Test_15_000,Test_16_000,Test_17_000,Test_18_000,Test_19_000,Test_20_000,Test_21_000,Test_22_000,Test_23_000,Test_24_000,Test_25_000,Test_26_000,Test_27_000,Test_28_000,Test_29_000
     logging.basicConfig(level=logging.INFO)
     parser = argparse.ArgumentParser(description='Postprocessing for Bayesian optimization module')
     parser.add_argument('--config_file', required=True, type=str,
