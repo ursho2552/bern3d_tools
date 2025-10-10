@@ -18,7 +18,7 @@ import argparse
 import spinup as sp
 import bern3d_tools.shared.utils as shared_utils
 
-def main(configuration_file: str, email: str) -> None:
+def main(configuration_file: str, email: str, copy_output: bool = False) -> None:
     """
     This is the main function for the spinup module.
     It handles the spinup process of the model.
@@ -26,6 +26,7 @@ def main(configuration_file: str, email: str) -> None:
     Parameters:
     configuration_file (str): Path to the configuration file.
     email (str): Email address for job notifications.
+    copy_output (bool): Flag to indicate if the output should be copied to the result directory.
 
     Returns:
     None
@@ -35,6 +36,21 @@ def main(configuration_file: str, email: str) -> None:
     my_config = shared_utils.read_config_file(configuration_file, sp.JobConfig)
     # Check if the configuration file is valid
     my_config = sp.check_configuration(my_config)
+
+    if copy_output:
+        # check if result_directory is specified
+        if my_config.result_directory is None:
+            logging.warning("Result directory is not specified. Cannot copy output.")
+            return
+
+        # Copy results to result directory
+        source_dir = f"{my_config.work_directory}/results"
+        result_dir = my_config.result_directory
+        logging.info(f"Copying results from {source_dir} to {result_dir}")
+        pattern = "Spinup*"
+        shared_utils.copy_output_files(source_dir, result_dir, pattern)
+
+        return
 
     for spinup_phase in range(my_config.current_phase, my_config.spinup_phases + 1):
 
@@ -81,10 +97,22 @@ def main(configuration_file: str, email: str) -> None:
                                                header_command=f"--mail-user={email}",
                                                dependency=dependency)
 
+    if my_config.result_directory:
+        # launch main.py with --copy_output to copy the results to the result directory after all jobs are done
+        dependency = [model_job_id]
+        # Launch dependent job
+        command_line_arguments = [f"--config_file {configuration_file} --copy_output"]
+
+        shared_utils.submit_job(my_config.python_submit_script, "main.py",
+                    ".", "00:15:00",
+                    header_command=f"--mail-user={email}",
+                    dependency=dependency, dependency_type='afterok',
+                        command_line_arg = command_line_arguments)
+
 
 if __name__ == "__main__":
     # Usage:
-    # python main.py --config_file /path/to/config_file.yaml --email username@mail.com
+    # python main.py --config_file /path/to/config_file.yaml
 
     logging.basicConfig(level=logging.INFO)
 
@@ -93,6 +121,8 @@ if __name__ == "__main__":
                         help='Path to the configuration file')
     parser.add_argument("--email", required=False, type=str,
                         help='Email address for job notifications')
+    parser.add_argument("--copy_output", action='store_true',
+                        help='Check if model finished and copy results to result directory if specified')
 
     args = parser.parse_args()
 
@@ -100,4 +130,4 @@ if __name__ == "__main__":
     if args.email is None:
         args.email = shared_utils.get_user_email()
 
-    main(args.config_file, args.email)
+    main(args.config_file, args.email, args.copy_output)

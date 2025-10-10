@@ -22,6 +22,9 @@ class JobConfig:
 
     # Path to the work directory
     work_directory: str
+    # Directory where the end results should be copied if specified
+    result_directory: str
+    python_submit_script: str
 
     # Paths to the sbatch scripts for each phase
     sbatch_script: dict[str, str]
@@ -61,6 +64,11 @@ def check_configuration(config_dataclass: JobConfig) -> JobConfig:
     if not Path(config_dataclass.work_directory).exists():
         # create it if it does not exist
         Path(config_dataclass.work_directory).mkdir(parents=True, exist_ok=True)
+    # Check if the result directory exists
+    if config_dataclass.result_directory:
+        if not Path(config_dataclass.result_directory).exists():
+            # create it if it does not exist
+            Path(config_dataclass.result_directory).mkdir(parents=True, exist_ok=True)
 
     assert config_dataclass.spinup_phases in [1, 2, 3], "Spinup phases must be either 1, 2 or 3"
     assert config_dataclass.current_phase <= config_dataclass.spinup_phases, "Current phase must be either 1, 2 or 3 and less than or equal to spinup phases"

@@ -66,6 +66,8 @@ All settings are controlled via a YAML configuration file. See `config_files/spi
 - `bern3d_executable_name`: Name of the Bern3D executable
 - `bern3d_restart_files`: Path to restart files (or `!!python/none`)
 - `work_directory`: Directory for all outputs and temporary files
+- `result_directory`: Directory where to copy the results after finishing (or `!!python/none`)
+- `python_submit_script`: SLURM script to run a python script with command line arguments
 - `sbatch_script`: Dictionary mapping each phase to its SLURM or shell script
 - `time`: Maximum allowed run time for each job
 - `spinup_phases`: Total number of spinup phases to run (e.g., 3)
@@ -77,6 +79,8 @@ bern3d_template: "/path/to/bern3d_f90/run"
 bern3d_executable_name: "RUNNAME"
 bern3d_restart_files: !!python/none
 work_directory: "/path/to/spinup"
+result_directory: !!python/none
+python_submit_script: "runscripts/run_python_script.sh"
 sbatch_script:
   phase1: "runscripts/run_bern3d_f90_phase1.sh"
   phase2: "runscripts/run_bern3d_f90_phase2.sh"

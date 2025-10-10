@@ -5,7 +5,11 @@ bern3d_executable_name: "RUNNAME"
 bern3d_restart_files: !!python/none
 
 # Path to the work directory (should be in $SCRATCH)
-work_directory: "/storage/scratch/users/uh24x373/sensitivity_analysis"
+work_directory: "/storage/scratch/users/uh24x373/Spinup_test"
+# Directory where the end results should be copied if specified and template python script
+result_directory: /storage/scratch/users/uh24x373/my_results
+python_submit_script: "../shared/runscripts/run_python_script.sh"
+
 # Path of the sbatch scripts (should be in the bern3d_tools)
 sbatch_script:
   phase1: "../shared/runscripts/run_bern3d_f90_mpi_3het.sh"

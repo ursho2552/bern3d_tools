@@ -175,6 +175,38 @@ def copy_template_files(exec_name: str, new_name: str,
             file_path.write_text(new_text)
             logging.warning(f"Replaced '{exec_name}' with '{new_name}' in: {file_path.name}")
 
+def copy_output_files(source_dir: str, result_dir: str, pattern: str = "*") -> None:
+    """
+    Copy output files from source directory to result directory.
+
+    Parameters:
+    source_dir (str): Path to the source directory.
+    result_dir (str): Path to the result directory.
+    pattern (str): Pattern to match files to copy.
+
+    Returns:
+    None
+    """
+    source_path = Path(source_dir)
+    result_path = Path(result_dir)
+
+    if not source_path.exists():
+        raise FileNotFoundError(f"Source directory {source_dir} does not exist.")
+    if not result_path.exists():
+        raise FileNotFoundError(f"Result directory {result_dir} does not exist.")
+
+    files_to_copy = list(source_path.glob(pattern))
+    if not files_to_copy:
+        logging.warning(f"No files matching pattern '{pattern}' found in {source_dir}.")
+        return
+
+    for file in files_to_copy:
+        if file.is_file():
+            dest_file = result_path / file.name
+            shutil.copy2(file, dest_file)
+            logging.info(f"Copied {file} to {dest_file}")
+
+
 def setup_run_directory(template_dir: str, executable_name: str,
                         new_name: str, work_dir: str,
                         restart_files: str,

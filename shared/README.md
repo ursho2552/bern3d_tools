@@ -87,6 +87,7 @@ The `runscripts/` directory contains pre-configured SLURM scripts for different 
 - **run_bern3d_f90_mpi_5het.sh** — MPI execution with 5 heterogeneous tasks (adds Sediment)
 - **run_bern3d_f90_mpi_6het.sh** — MPI execution with 6 heterogeneous tasks (adds Ice-sheet/CISM)
 - **run_bern3d_v3_omp_6cores.sh** — Bern3D-v3 execution on 6 cores
+- **run_python_script.sh** - SLURM script to submit a python script with command line arguments
 
 These scripts handle module loading, environment variables, and proper SLURM configuration for the University of Bern cluster environment.
 
