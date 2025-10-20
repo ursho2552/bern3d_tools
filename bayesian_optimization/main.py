@@ -158,25 +158,31 @@ def main(configuration_file: str, current_iteration: int, email: str) -> None:
                                                                restart_files=restart_files)
 
         # update parameter files
-        param_file = f"{new_simulation_path}/{my_simulation_name}{my_config.bern3d_parameter_file}"
-        parameter_dict = shared_utils.parse_to_dict(file_path=param_file)
+        # May have multiple paramter files to update in my_config.bern3d_parameter_file
+        # these are comma separated
+        list_parameter_files = my_config.bern3d_parameter_file.split(",")
+        for param_file_template in list_parameter_files:
 
-        # Adapt value
-        # paramter list is taken from parameter_bounds keys
-        parameter_names = list(my_config.parameter_bounds.keys())
-        parameter_dict = shared_utils.adapt_dictionary(config_dict=parameter_dict,
-                                                       parameter=parameter_names,
-                                                       factor=1, new_value=next_parameter)
-        # set fixed values
-        for name, value in zip(names_fixed, fixed_values):
+            param_file = f"{new_simulation_path}/{my_simulation_name}{param_file_template}"
+            parameter_dict, preserved_lines = shared_utils.parse_to_dict(file_path=param_file)
+
+            # Adapt value
+            # paramter list is taken from parameter_bounds keys
+            parameter_names = list(my_config.parameter_bounds.keys())
             parameter_dict = shared_utils.adapt_dictionary(config_dict=parameter_dict,
-                                                               parameter=[name],
-                                                               factor=1,
-                                                               new_value=[value])
+                                                        parameter=parameter_names,
+                                                        factor=1, new_value=next_parameter)
+            # set fixed values
+            for name, value in zip(names_fixed, fixed_values):
+                parameter_dict = shared_utils.adapt_dictionary(config_dict=parameter_dict,
+                                                                parameter=[name],
+                                                                factor=1,
+                                                                new_value=[value])
 
-        # Create new parameter file
-        _ = shared_utils.create_new_parameter_file(config_dict=parameter_dict,
-                                                   parameter_file_name=param_file)
+            # Create new parameter file
+            _ = shared_utils.create_new_parameter_file(config_dict=parameter_dict,
+                                                    parameter_file_name=param_file,
+                                                    preserved_lines=preserved_lines)
 
         # run the new simulation
         model_job_id = shared_utils.submit_job(script_template=my_config.bern3d_script,

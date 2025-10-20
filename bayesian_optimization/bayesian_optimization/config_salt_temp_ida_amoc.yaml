@@ -57,7 +57,7 @@ target_values:
  target_npp: !!python/none
 
 # Path to file with parameters to be optimized
-bern3d_parameter_file: ".ocn.parameter"
+bern3d_parameter_file: ".ocn.parameter,.ebm.parameter"
 bern3d_restart_files: !!python/none
 
 parameter_bounds:
@@ -65,6 +65,7 @@ parameter_bounds:
   kappa0: !!python/tuple [0.1e-5,10.0e-5]
   gmkap: !!python/tuple [100,4000]
   idrag: !!python/tuple [0.1,4.0]
+  brinerejfrac: !!python/tuple [0.5,1.0]
 
 fixed_values:
   scf: 1.0
