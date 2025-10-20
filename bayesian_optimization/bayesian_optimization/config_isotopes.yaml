@@ -69,6 +69,8 @@ parameter_bounds:
   pavelscale: !!python/tuple [0.03,0.16]
   bgcWterrPa: !!python/tuple [10000,25000]
 
+fixed_values: {}
+
 initialization_type: "lhs"
 isotope: "Pad"
 n_initialization: 10

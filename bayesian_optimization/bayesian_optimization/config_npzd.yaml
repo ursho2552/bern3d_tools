@@ -74,6 +74,7 @@ parameter_bounds:
   pref_det: !!python/tuple [0.1,2.0]
   pref_self: !!python/tuple [0.1,2.0]
 
+fixed_values: {}
 
 initialization_type: "random"
 tuning_target: "dic_alk_po4_sio_npp_poc_caco3_opal"

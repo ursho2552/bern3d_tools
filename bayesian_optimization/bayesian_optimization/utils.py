@@ -91,6 +91,7 @@ class ConfigParameters:
     target_values: dict[str, Optional[float]]
 
     parameter_bounds: dict[str, tuple[float, float]]
+    fixed_values: dict[str, float]
 
     # Path to file with parameters to be optimized
     bern3d_parameter_file: str
@@ -161,6 +162,16 @@ def check_configuration(config_dataclass: ConfigParameters) -> ConfigParameters:
 
         bound_values[key] = tuple(transformed_values)
     config_dataclass.parameter_bounds = bound_values
+
+    # Handle fixed_values to ensure it's not None and filter out None values
+    if config_dataclass.fixed_values is None:
+        config_dataclass.fixed_values = {}
+    else:
+        # Filter out None values from fixed_values
+        config_dataclass.fixed_values = {
+            key: value for key, value in config_dataclass.fixed_values.items()
+            if value is not None
+        }
 
     # Check if the target is valid
     check_valid_target(config_dataclass.tuning_target)

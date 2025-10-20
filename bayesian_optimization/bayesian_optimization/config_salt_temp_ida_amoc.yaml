@@ -45,7 +45,7 @@ validation_data_path: "/storage/homefs/uh24x373/bgc_bern/bern3d_f90/run/"
 
 # The number of iterations to run the Bayesian optimization algorithm
 max_iterations: 100
-max_stable_iterations: 15
+max_stable_iterations: 10
 # Targets for POC, CaCO3 and NPP in Pg C yr-1
 # Targets for Opal in Tg Si yr-1
 # Targets for amoc in °C
@@ -66,6 +66,8 @@ parameter_bounds:
   gmkap: !!python/tuple [100,4000]
   idrag: !!python/tuple [0.1,4.0]
 
+fixed_values:
+  scf: 1.0
 
 initialization_type: "random"
 tuning_target: "temp_salt_ida_amoc"

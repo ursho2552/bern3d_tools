@@ -139,12 +139,16 @@ def main(configuration_file: str, current_iteration: int, email: str) -> None:
             template_dir = my_config.bern3d_template
             executable_name = my_config.bern3d_executable_name
             restart_files=my_config.bern3d_restart_files
+            fixed_values = []
+            names_fixed = []
         else:
             # Create new simulation files with runname equal to my_simulation_name
             my_simulation_name = f"{my_config.simulation_name_bern3d}_{str(batch_number - batch_offset).zfill(2)}_{str(current_iteration).zfill(3)}"
             template_dir = f"{my_config.work_directory}/run/"
             executable_name = "Reference"
             restart_files=None
+            fixed_values = list(my_config.fixed_values.values()) if my_config.fixed_values else []
+            names_fixed = list(my_config.fixed_values.keys()) if my_config.fixed_values else []
 
         # Support for Bern3D_F90 only
         new_simulation_path = shared_utils.setup_run_directory(template_dir=template_dir,
@@ -153,7 +157,7 @@ def main(configuration_file: str, current_iteration: int, email: str) -> None:
                                                                work_dir=my_config.work_directory,
                                                                restart_files=restart_files)
 
-        # update parameter file
+        # update parameter files
         param_file = f"{new_simulation_path}/{my_simulation_name}{my_config.bern3d_parameter_file}"
         parameter_dict = shared_utils.parse_to_dict(file_path=param_file)
 
@@ -163,6 +167,13 @@ def main(configuration_file: str, current_iteration: int, email: str) -> None:
         parameter_dict = shared_utils.adapt_dictionary(config_dict=parameter_dict,
                                                        parameter=parameter_names,
                                                        factor=1, new_value=next_parameter)
+        # set fixed values
+        for name, value in zip(names_fixed, fixed_values):
+            parameter_dict = shared_utils.adapt_dictionary(config_dict=parameter_dict,
+                                                               parameter=[name],
+                                                               factor=1,
+                                                               new_value=[value])
+
         # Create new parameter file
         _ = shared_utils.create_new_parameter_file(config_dict=parameter_dict,
                                                    parameter_file_name=param_file)
