@@ -136,12 +136,18 @@ target_values:
 
 # Path to file with parameters to be optimized
 # The path should contain a keyword {my_simulation} which will be replaced by the simulation name
-bern3d_parameter_file: ".npzd.parameter"
+bern3d_parameter_file: ".npzd.parameter,ocn.parameter"
 bern3d_restart_files: "/path/to/restart_file/Spinup2*"
 
 parameter_bounds:
   a_growth_diaz: !!python/tuple [0.3,1.7]
   a_growth_other: !!python/tuple [0.3,1.7]
+  gmkap: !!python/tuple [100,4000]
+
+# In case a value has to be changed to a fixed value from the reference, if this is not needed, the
+# user may write fixed_values: {} instead
+fixed_values:
+  scf: 1.7
 
 # Type of initialization
 initialization_type: "random"
