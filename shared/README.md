@@ -74,7 +74,7 @@ import bern3d_tools.shared.utils as shared_utils
 - **adapt_dictionary(config_dict, parameter, factor, new_value=None)**
   Adapts parameter values in a configuration dictionary, supporting relative or absolute changes.
 
-- **create_new_parameter_file(config_dict, parameter_file_name)**
+- **create_new_parameter_file(config_dict, parameter_file_name, preserved_lines)**
   Writes a configuration dictionary to a new parameter file.
 
 ### Shared Runscripts

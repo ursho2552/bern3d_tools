@@ -69,17 +69,20 @@ def main(configuration_file: str, email: str, analyze_runs: bool = False) -> Non
                 if parameter is not None:
                     # Update the parameter file with the new parameter value
                     # get current parameter values
-                    param_file = f"{run_directory}/{new_name}{my_config.bern3d_parameter_file}"
-                    parameter_dict = shared_utils.parse_to_dict(file_path=param_file)
+                    list_parameter_files = my_config.bern3d_parameter_file.split(",")
+                    for param_file_template in list_parameter_files:
 
-                    # Adapt value
-                    parameter_dict = shared_utils.adapt_dictionary(config_dict=parameter_dict,
-                                                    parameter=parameter,
-                                                    factor=factor)
-                    
-                    # Create new parameter file
-                    _ = shared_utils.create_new_parameter_file(config_dict=parameter_dict,
-                                                               parameter_file_name=param_file)
+                        parameter_dict, preserved_lines = shared_utils.parse_to_dict(file_path=param_file_template)
+
+                        # Adapt value
+                        parameter_dict = shared_utils.adapt_dictionary(config_dict=parameter_dict,
+                                                        parameter=parameter,
+                                                        factor=factor)
+
+                        # Create new parameter file
+                        _ = shared_utils.create_new_parameter_file(config_dict=parameter_dict,
+                                                                parameter_file_name=param_file_template,
+                                                                preserved_lines=preserved_lines)
 
                 # Submit the job
                 model_job_id = shared_utils.submit_job(script_template=my_config.bern3d_run_script,

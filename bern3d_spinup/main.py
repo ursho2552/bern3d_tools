@@ -67,7 +67,8 @@ def main(configuration_file: str, email: str, copy_output: bool = False) -> None
 
         # Load the spinup configuration
         parameter_file = f"{my_config.work_directory}/run/{new_name}.main.parameter"
-        parameter_dict = shared_utils.parse_to_dict(file_path=parameter_file, reset=True)
+        parameter_dict, preserved_lines = shared_utils.parse_to_dict(file_path=parameter_file,
+                                                                     reset=True)
 
         # Adapt values in the parameter file
         for phase in range(1, spinup_phase + 1):
@@ -82,7 +83,8 @@ def main(configuration_file: str, email: str, copy_output: bool = False) -> None
 
         # Create new parameter file
         _ = shared_utils.create_new_parameter_file(config_dict=parameter_dict,
-                                                   parameter_file_name=parameter_file)
+                                                   parameter_file_name=parameter_file,
+                                                   preserved_lines=preserved_lines)
 
         # Start the simulation with potential dependencies
         dependency = None

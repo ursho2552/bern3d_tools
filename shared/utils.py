@@ -248,29 +248,55 @@ def setup_run_directory(template_dir: str, executable_name: str,
 
     return run_directory
 
-def parse_to_dict(file_path: str, reset: Optional[bool] = False) -> dict[str, Union[str, int, float]]:
+def parse_to_dict(file_path: str, reset: Optional[bool] = False) -> tuple[dict[str, Union[str, int, float]], list[str]]:
     """
-    Parse a file to a dictionary.
+    Parse a file to a dictionary while preserving the original structure.
 
     Parameters:
     file_path (str): Path to the file to parse.
+    reset (bool): Optional parameter for type inference.
 
     Returns:
-    dict: Parsed dictionary.
+    tuple: (config_dict, file_structure) where file_structure preserves original order with placeholders
     """
 
     config_dict: dict[str, Union[str, int, float]] = {}
+    file_structure: list[str] = []  # Preserves the entire file structure
+
     with open(file_path, 'r', encoding='utf-8') as file:
         for line in file:
-            # Remove comments and whitespace
-            code = line.split('#',1)[0].strip()
-            if not code and "=" not in code and ":" not in code:
-                continue
-            symbol = "=" if "=" in code else ":"
-            key, value = map(str.strip, code.split(symbol, 1))
-            config_dict[key] = infer_type(value, reset)
+            original_line = line.rstrip('\n\r')
+            code = line.split('#', 1)[0].strip()
 
-    return config_dict
+            # Preserve section headers and comments as-is
+            if code.startswith('[') and code.endswith(']'):
+                file_structure.append(original_line)
+                continue
+
+            # Preserve comment-only lines and empty lines as-is
+            if not code or ("=" not in code and ":" not in code):
+                file_structure.append(original_line)
+                continue
+
+            symbol = "=" if "=" in code else ":"
+
+            # Skip lines that don't have exactly one separator (malformed lines)
+            if code.count(symbol) != 1:
+                file_structure.append(original_line)
+                continue
+
+            key, value = map(str.strip, code.split(symbol, 1))
+
+            # Skip empty keys or values
+            if not key or not value:
+                file_structure.append(original_line)
+                continue
+
+            # Store the parameter and use a placeholder in file structure
+            config_dict[key] = infer_type(value, reset)
+            file_structure.append(f"PARAM_PLACEHOLDER_{key}")
+
+    return config_dict, file_structure
 
 def infer_type(value:str, reset: Optional[bool] = False) -> Union[str, int, float]:
     """
@@ -328,6 +354,11 @@ def adapt_dictionary(config_dict: dict[str, Union[str, int, float]],
         assert len(parameter) == len(new_value), "Length of parameter and new_value must be the same"
 
     for param, new_val in zip(parameter, new_value):
+
+        if param not in config_dict:
+            logging.warning(f"Parameter {param} not found in configuration dictionary")
+            continue
+
         original_value = config_dict[param]
         if isinstance(original_value, (int, float)):
             if new_val is None:
@@ -343,27 +374,47 @@ def adapt_dictionary(config_dict: dict[str, Union[str, int, float]],
     return config_dict
 
 def create_new_parameter_file(config_dict: dict[str, Union[str, int, float]],
-                              parameter_file_name: str) -> str:
+                              parameter_file_name: str,
+                              preserved_lines: Optional[list[str]] = None) -> str:
 
     """
-    Create a new parameter file based on the configuration dictionary.
+    Create a new parameter file based on the configuration dictionary, preserving structure.
 
     Parameters:
     config_dict (dict): Configuration dictionary.
-    executable_name (str): Name of the executable.
-    parameter_suffix (str): Suffix for the parameter file.
+    parameter_file_name (str): Name of the parameter file to create.
+    preserved_lines (list): List preserving the original file structure with placeholders.
 
     Returns:
     str: Path to the new parameter file.
     """
     with open(parameter_file_name, 'w', encoding='utf-8') as file:
-        for key, value in config_dict.items():
-            if isinstance(value, bool):
-                value_str = '.true.' if value else '.false.'
-            elif isinstance(value, (int, float)):
-                value_str = str(value)
-            else:
-                value_str = f'{value}'
-            file.write(f"{key} = {value_str}\n")
+        if preserved_lines:
+            for line in preserved_lines:
+                if line.startswith("PARAM_PLACEHOLDER_"):
+                    # Replace placeholder with actual parameter
+                    key = line.replace("PARAM_PLACEHOLDER_", "")
+                    if key in config_dict:
+                        value = config_dict[key]
+                        if isinstance(value, bool):
+                            value_str = '.true.' if value else '.false.'
+                        elif isinstance(value, (int, float)):
+                            value_str = str(value)
+                        else:
+                            value_str = f'{value}'
+                        file.write(f"{key} = {value_str}\n")
+                else:
+                    # Write preserved line as-is
+                    file.write(f"{line}\n")
+        else:
+            # Fallback: just write parameters if no structure preserved
+            for key, value in config_dict.items():
+                if isinstance(value, bool):
+                    value_str = '.true.' if value else '.false.'
+                elif isinstance(value, (int, float)):
+                    value_str = str(value)
+                else:
+                    value_str = f'{value}'
+                file.write(f"{key} = {value_str}\n")
 
     return parameter_file_name
