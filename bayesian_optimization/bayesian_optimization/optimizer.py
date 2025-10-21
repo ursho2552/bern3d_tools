@@ -500,37 +500,50 @@ def correct_failed_simulations(optimizer: Optimizer, df: pd.DataFrame,
     return corrected_target.tolist()
 
 
-def get_config_value(path: str, param: str):
+def get_config_value(path: Union[str, list[str]], param: str):
     """
     Get the value of a parameter from a configuration file.
 
     Parameters:
-    path (str): Path to the configuration file.
+    path (str or list[str]): Path to the configuration file.
     param (str): Parameter name to retrieve.
 
     Returns:
     str or int or float: Value of the parameter.
     """
-    with open(path, encoding='utf-8') as f:
-        for line in f:
-            line = line.split('#', 1)[0].strip()
-            if not line or '=' not in line:
-                continue
-            key, raw = map(str.strip, line.split('=', 1))
-            if key == param:
-                v = raw.strip()
-                if v.lower() in ('.true.', 'true'):
-                    return True
-                if v.lower() in ('.false.', 'false'):
-                    return False
-                if re.fullmatch(r'[+-]?\d+', v):
-                    return int(v)
-                if re.fullmatch(r'[+-]?\d*\.?\d*[eE][+-]?\d+', v):
-                    return float(v)
-                if re.fullmatch(r'[+-]?\d*\.\d*', v) and '.' in v:
-                    return float(v)
+    if not isinstance(path, list):
+        path = [path]
+    for path_item in path:
+        with open(path_item, encoding='utf-8') as f:
+            for line in f:
+                line = line.split('#', 1)[0].strip()
 
-                return v.strip('"').strip("'")
+                if line.startswith('[') and line.endswith(']'):
+                    continue
+
+                if not line or ("=" not in line and ":" not in line):
+                    continue
+
+                symbol = "=" if "=" in line else ":"
+
+                if line.count(symbol) != 1:
+                    continue
+
+                key, raw = map(str.strip, line.split(symbol, 1))
+                if key == param:
+                    v = raw.strip()
+                    if v.lower() in ('.true.', 'true'):
+                        return True
+                    if v.lower() in ('.false.', 'false'):
+                        return False
+                    if re.fullmatch(r'[+-]?\d+', v):
+                        return int(v)
+                    if re.fullmatch(r'[+-]?\d*\.?\d*[eE][+-]?\d+', v):
+                        return float(v)
+                    if re.fullmatch(r'[+-]?\d*\.\d*', v) and '.' in v:
+                        return float(v)
+
+                    return v.strip('"').strip("'")
 
     raise KeyError(f"No parameter named {param!r} in {path!r}")
 
@@ -580,13 +593,19 @@ def compute_and_tell_optimizer(optimizer: Optimizer, target: str,
     for sim in simulation_names:
         root_dir = Path(sim).parent.parent
         name_sim = Path(sim).name.split(".")[0]
-        name_param = f"{name_sim}{parameter_file_template}"
+        # paramter_file_template may contain multiple parts separated by ,
+        list_parameter_file_template = parameter_file_template.split(",")
+        # create multiple name_param for each item in list_parameter_file_template
         # check if runs are in run_{name_sim} or run
-        if os.path.exists(f"{root_dir}/run_{name_sim}/{name_param}"):
-            parameter_files.append(f"{root_dir}/run_{name_sim}/{name_param}")
+        if os.path.exists(f"{root_dir}/run_{name_sim}/"):
+            # parameter_files.append(f"{root_dir}/run_{name_sim}/{name_param}")
+            current_param_list = [f"{root_dir}/run_{name_sim}/{name_sim}{part}" for part in list_parameter_file_template]
+            parameter_files.append(current_param_list)
             log_files.append(f"{root_dir}/run_{name_sim}/{name_sim}.out")
         else:
-            parameter_files.append(f"{root_dir}/run/{name_param}")
+            # parameter_files.append(f"{root_dir}/run/{name_param}")
+            current_param_list = [f"{root_dir}/run/{name_sim}{part}" for part in list_parameter_file_template]
+            parameter_files.append(current_param_list)
             log_files.append(f"{root_dir}/run/{name_sim}.out")
 
     test_df = calculate_score_df(target, parameter_list, simulation_dict, simulation_names,

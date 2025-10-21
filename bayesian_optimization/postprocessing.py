@@ -95,7 +95,7 @@ def main(configuration_file, simulation_names) -> None:
 if __name__ in "__main__":
 
     # Parse command line arguments
-    # python postprocessing.py --config_file bayesian_optimization/config_salt_temp_ida_amoc.yaml --simulation_name Reference,Test_00_000,Test_01_000,Test_02_000,Test_03_000,Test_04_000,Test_05_000,Test_06_000,Test_07_000,Test_08_000,Test_09_000,Test_10_000,Test_11_000,Test_12_000,Test_13_000,Test_14_000,Test_15_000,Test_16_000,Test_17_000,Test_18_000,Test_19_000,Test_20_000,Test_21_000,Test_22_000,Test_23_000,Test_24_000,Test_25_000,Test_26_000,Test_27_000,Test_28_000,Test_29_000
+    # python postprocessing.py --config_file bayesian_optimization/config_salt_temp_ida_amoc.yaml --simulation_name Reference,Wind_00_000,Wind_01_000,Wind_02_000,Wind_03_000,Wind_04_000,Wind_05_000,Wind_06_000,Wind_07_000,Wind_08_000,Wind_09_000,Wind_10_000,Wind_11_000,Wind_12_000,Wind_13_000,Wind_14_000,Wind_15_000,Wind_16_000,Wind_17_000,Wind_18_000,Wind_19_000,Wind_20_000,Wind_21_000,Wind_22_000,Wind_23_000,Wind_24_000,Wind_25_000,Wind_26_000,Wind_27_000,Wind_28_000,Wind_29_000
     logging.basicConfig(level=logging.INFO)
     parser = argparse.ArgumentParser(description='Postprocessing for Bayesian optimization module')
     parser.add_argument('--config_file', required=True, type=str,
