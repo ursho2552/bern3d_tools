@@ -614,7 +614,13 @@ def compute_and_tell_optimizer(optimizer: Optimizer, target: str,
     # Add penalty to failed simulations
     corrected_mae = correct_failed_simulations(optimizer, test_df, target)
 
-    tested_parameters = test_df[parameter_list].values.tolist()
+    # Remove reference in test_df if it exists
+    if "Reference" in test_df.index:
+        test_df_clean = test_df.drop(index="Reference")
+    else:
+        test_df_clean = test_df
+    
+    tested_parameters = test_df_clean[parameter_list].values.tolist()
     optimizer.tell(tested_parameters, corrected_mae)
     logging.info("Told new parameters to optimizer")
 
