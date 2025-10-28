@@ -60,8 +60,8 @@ def main(configuration_file, simulation_names) -> None:
 
     if first_iteration:
         updated_df = new_df
-        # check if index row of new_df contains the word Reference
-        if "Reference" in new_df.index[0]:
+        # check if index row of new_df contains the word Reference *(my_config.use_reference_simulation)
+        if ("Reference" in new_df.index[0])*(my_config.use_reference_simulation):
             # use the error of the reference simulation as first error
            first_error = new_df.iloc[0][-1]
         else:
