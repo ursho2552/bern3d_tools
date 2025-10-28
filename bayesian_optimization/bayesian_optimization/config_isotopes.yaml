@@ -43,6 +43,7 @@ bern3d_template: "/storage/homefs/uh24x373/bgc_bern/bern3d_f90/run/"
 validation_data_path: "/storage/research/climate_climtip/testorf/data/"
 
 # The number of iterations to run the Bayesian optimization algorithm
+use_reference_simulation: False
 max_iterations: 100
 max_stable_iterations: 15
 # Targets for POC, CaCO3 and NPP in Pg C yr-1

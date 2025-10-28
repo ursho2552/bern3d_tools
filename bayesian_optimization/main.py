@@ -126,7 +126,8 @@ def main(configuration_file: str, current_iteration: int, email: str) -> None:
     my_simulation_ids = []
     my_simulation_names = []
     batch_offset = 0
-    if current_iteration == 0 and not my_config.initialization_type == "simulation":
+
+    if (current_iteration == 0)*(not my_config.initialization_type == "simulation")*(my_config.use_reference_simulation):
         # extend next parameters by one to account for the reference simulation
         next_parameters.insert(0,None)
         batch_offset = 1

@@ -85,6 +85,7 @@ class ConfigParameters:
     output_dir_optimizer: str
 
     # The number of iterations to run the Bayesian optimization algorithm
+    use_reference_simulation: bool
     max_iterations: int
     max_stable_iterations: int
 

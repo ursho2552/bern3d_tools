@@ -57,6 +57,7 @@ target_values:
  target_npp: 60.0
 
 # Path to file with parameters to be optimized
+use_reference_simulation: False
 bern3d_parameter_file: ".npzd.parameter"
 bern3d_restart_files: "/storage/scratch/users/uh24x373/bern3d_f90/results/Spinup2*"
 
@@ -78,9 +79,9 @@ fixed_values: {}
 
 initialization_type: "random"
 tuning_target: "dic_alk_po4_sio_npp_poc_caco3_opal"
-n_initialization: 5
+n_initialization: 10
 surrogate_type: "RF"
 acquisition_type: "gp_hedge"
-batchsize: 10
+batchsize: 30
 acquisitition_optimizer: "auto"
 job_number: -1
