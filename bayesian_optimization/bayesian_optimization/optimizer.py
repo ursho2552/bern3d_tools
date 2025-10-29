@@ -611,15 +611,17 @@ def compute_and_tell_optimizer(optimizer: Optimizer, target: str,
     test_df = calculate_score_df(target, parameter_list, simulation_dict, simulation_names,
                                  validation_data_path, parameter_files, log_files, **kwargs)
 
-    # Add penalty to failed simulations
-    corrected_mae = correct_failed_simulations(optimizer, test_df, target)
 
     # Remove reference in test_df if it exists
-    if "Reference" in test_df.index:
-        test_df_clean = test_df.drop(index="Reference")
-    else:
-        test_df_clean = test_df
-    
+    test_df_clean = test_df.copy()
+    for index_str in test_df.index:
+        if "Reference" in index_str:
+            test_df_clean = test_df.drop(index=index_str)
+            break
+
+    # Add penalty to failed simulations
+    corrected_mae = correct_failed_simulations(optimizer, test_df_clean, target)
+
     tested_parameters = test_df_clean[parameter_list].values.tolist()
     optimizer.tell(tested_parameters, corrected_mae)
     logging.info("Told new parameters to optimizer")
