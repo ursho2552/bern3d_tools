@@ -7,7 +7,7 @@ import os
 
 import re
 import logging
-from typing import Union
+from typing import Union, Optional
 
 from pathlib import Path
 import pandas as pd
@@ -17,7 +17,7 @@ import numpy.typing as npt
 from skopt import Optimizer
 
 def find_nearest(array: npt.ArrayLike, value: float,
-                 retval: int = 1) -> Union[float, int, tuple[float, int]]:
+                 retval: Optional[int] = 1) -> Union[float, int, tuple[float, int]]:
     """
     Find the nearest value in an array to a given value.
 
@@ -44,7 +44,7 @@ def find_nearest(array: npt.ArrayLike, value: float,
     return array[idx]
 
 def nrmse(predictions: npt.ArrayLike, targets: npt.ArrayLike,
-          weights: npt.ArrayLike = None) -> float:
+          weights: Optional[npt.ArrayLike] = None) -> float:
     """
     Calculate the Normalized Root Mean Square Error (NRMSE) between predictions and targets.
 
@@ -62,6 +62,68 @@ def nrmse(predictions: npt.ArrayLike, targets: npt.ArrayLike,
     nrmse_value = np.sqrt(mse) / (np.nanmax(targets) - np.nanmin(targets))
 
     return nrmse_value
+
+def get_field_stability(ds: xr.Dataset, var_name: str, depth_level: Optional[int] = 0,
+                        window: Optional[int] = 11,
+                        time_dim: Optional[str] = "time",
+                        min_stable_fraction: Optional[float] = 0.2) -> float:
+    """
+    Calculate the stability level of a field in a dataset.
+
+    Parameters:
+    ds (xr.Dataset): Input dataset containing the variable
+    var_name (str): Name of the variable to analyze
+    depth_level (int): Depth level index to select (default: 0)
+    window (int): Rolling window size (default: 10)
+    time_dim (str): Name of the time dimension (default: "time")
+    min_stable_fraction (float): Minimum fraction of total time that must be stable (default: 0.2)
+
+    Returns:
+    float: Stability threshold (0.005-1.0), where lower values indicate higher stability
+    """
+    # Ensure odd window size for symmetric rolling window
+    window = window + 1 if window % 2 == 0 else window
+
+    # Calculate rolling variance
+    data = ds[var_name].isel(z_t=depth_level).mean(dim=("lat_t", "lon_t"))
+    data_variance = data.rolling({time_dim: window}, center=True).var()
+
+    # Remove NaN values at the beginning and end due to rolling window
+    half_window = window // 2
+    valid_slice = slice(half_window, -half_window if half_window > 0 else None)
+    data_variance_clean = data_variance[valid_slice]
+
+    # Calculate stability level
+    threshold = np.arange(0.001, 1.0, 0.001)
+    max_variance = np.nanmax(data_variance_clean)
+
+    if max_variance == 0 or np.isnan(max_variance):
+        return 1.0
+
+    relative_variance = data_variance_clean / max_variance
+    valid_mask = ~np.isnan(relative_variance)
+    no_nan_variance = relative_variance[valid_mask]
+
+    if len(no_nan_variance) == 0:
+        return 1.0
+
+    total_length = len(no_nan_variance)
+    min_stable_length = int(total_length * min_stable_fraction)
+
+    # Find the lowest threshold where there's a point after which all remaining points are below it
+    # and the stable period is at least min_stable_fraction of total time (20% for now)
+    for thr in threshold:
+        below_threshold = no_nan_variance < thr
+        if np.any(below_threshold):
+            # Find the first point that goes below threshold
+            first_below_idx = np.where(below_threshold)[0][0]
+            # Check if all points from that index onwards are below threshold
+            stable_length = total_length - first_below_idx
+            if (np.all(no_nan_variance[first_below_idx:] < thr) and
+                stable_length >= min_stable_length):
+                return thr
+
+    return 1.0
 
 def score_isotope(tuning_target: str, parameter_list: list[str],
                   model_xr: dict[str, xr.Dataset], sims: list[str],
@@ -195,8 +257,12 @@ def score_temp_salt_amoc_ida(target: str, parameter_list: list[str],
             error_amoc = 1.0
             error_ida = 0.0
 
-            model_ds = model_xr[sim].isel(time=-1)
+            stability_level_temp = 0.0
+            stability_level_salt = 0.0
+            stability_level_ida = 0.0
 
+            model_ds = model_xr[sim].isel(time=-1)
+            model_ds_full = model_xr[sim]
             # Get weights for the model grid
             cell_volume = model_ds.boxvol.values
             mask_atl = model_ds.masks.values == 1
@@ -222,10 +288,20 @@ def score_temp_salt_amoc_ida(target: str, parameter_list: list[str],
                 sim_df = model_ds[sim_variable_name_temp].values
                 error_temp = nrmse(sim_df, obs_df_temp, weight)
 
+                stability_level_temp = get_field_stability(ds=model_ds_full,
+                                                        var_name=sim_variable_name_temp,
+                                                        depth_level=0, window=10,
+                                                        time_dim="time")
+
             # Calculate the MAE for salinity
             if 'salt' in target.lower():
                 sim_df = model_ds[sim_variable_name_salt].values
                 error_salt = nrmse(sim_df, obs_df_salt, weight)
+
+                stability_level_salt = get_field_stability(ds=model_ds_full,
+                                                            var_name=sim_variable_name_salt,
+                                                            depth_level=0, window=10,
+                                                            time_dim="time")
 
             # Calcualte difference in ideal age
             # ideal age is stored in the model output as ida and in the observations_ida.nc file as "ida"
@@ -233,8 +309,12 @@ def score_temp_salt_amoc_ida(target: str, parameter_list: list[str],
                 sim_df = model_ds[sim_variable_name_ida].values
                 error_ida = nrmse(sim_df, obs_df_ida, weight)
 
+                stability_level_ida = get_field_stability(ds=model_ds_full,
+                                                            var_name=sim_variable_name_ida,
+                                                            depth_level=20, window=10,
+                                                            time_dim="time")
+
             # Calculate difference in AMOC strength
-            # sim is the .nc file Bay_wind_00_000.00001765_full_ave.nc for which we want to subsitute the _full_ave.nc for _timeseries_ave.nc
             if target_amoc is None:
                 target_amoc = 15.5
             target_amoc_min = target_amoc - 0.5
@@ -248,12 +328,18 @@ def score_temp_salt_amoc_ida(target: str, parameter_list: list[str],
 
             # Combine errors. If temperature, salinity and ideal age are perfect or not used,
             # then the total error is just the AMOC error. Else, the amoc error is used as a multiplier
-            # for the other errors.
+            # for the other errors. Similarly, for the stability levels.
             main_error = error_temp + error_salt + error_ida
+            stability_error = 1 + stability_level_temp + stability_level_salt + stability_level_ida
+
             if main_error == 0:
-                total_error = error_amoc - 1
+                total_error = stability_error*(error_amoc - 1)
             else:
-                total_error = error_amoc*main_error
+                total_error = stability_error*error_amoc*main_error
+
+            logging.info(f"Total error is {total_error} for simulation {sim}")
+            logging.info(f"error_temp: {error_temp}, error_salt: {error_salt}, error_ida: {error_ida}, error_amoc: {error_amoc}")
+            logging.info(f"stability_level_temp: {stability_level_temp}, stability_level_salt: {stability_level_salt}, stability_level_ida: {stability_level_ida}")
 
             if total_error > 10:
                 total_error = 1e6
@@ -328,8 +414,14 @@ def score_npzd(target: str, parameter_list: list[str], model_xr: dict[str, xr.Da
             error_opal = 0.0
             error_npp = 0.0
 
-            model_ds = model_xr[sim].isel(time=-1)
+            stability_level_dic = 0.0
+            stability_level_alk = 0.0
+            stability_level_po4 = 0.0
+            stability_level_sio = 0.0
+            stability_level_no3 = 0.0
 
+            model_ds = model_xr[sim].isel(time=-1)
+            model_ds_full = model_xr[sim]
             # Get weights for the model grid
             area = model_ds.area.values
 
@@ -337,18 +429,38 @@ def score_npzd(target: str, parameter_list: list[str], model_xr: dict[str, xr.Da
             if 'dic' in target.lower():
                 sim_df = model_ds[sim_variable_name_dic].values * 1000
                 error_dic = nrmse(sim_df, obs_df_dic, 1)
+                stability_level_dic = get_field_stability(ds=model_ds_full,
+                                                        var_name=sim_variable_name_dic,
+                                                        depth_level=0, window=10,
+                                                        time_dim="time")
             if 'alk' in target.lower():
                 sim_df = model_ds[sim_variable_name_alk].values * 1000
                 error_alk = nrmse(sim_df, obs_df_alk, 1)
+                stability_level_alk = get_field_stability(ds=model_ds_full,
+                                                        var_name=sim_variable_name_alk,
+                                                        depth_level=0, window=10,
+                                                        time_dim="time")
             if 'po4' in target.lower():
                 sim_df = model_ds[sim_variable_name_po4].values * 1000
                 error_po4 = nrmse(sim_df, obs_df_po4, 1)
+                stability_level_po4 = get_field_stability(ds=model_ds_full,
+                                                        var_name=sim_variable_name_po4,
+                                                        depth_level=0, window=10,
+                                                        time_dim="time")
             if 'sio' in target.lower():
                 sim_df = model_ds[sim_variable_name_sio].values * 1000
                 error_sio = nrmse(sim_df, obs_df_sio, 1)
+                stability_level_sio = get_field_stability(ds=model_ds_full,
+                                                        var_name=sim_variable_name_sio,
+                                                        depth_level=0, window=10,
+                                                        time_dim="time")
             if 'no3' in target.lower():
                 sim_df = model_ds[sim_variable_name_no3].values * 1000
                 error_no3 = nrmse(sim_df, obs_df_no3, 1)
+                stability_level_no3 = get_field_stability(ds=model_ds_full,
+                                                        var_name=sim_variable_name_no3,
+                                                        depth_level=0, window=10,
+                                                        time_dim="time")
 
             # Calculate difference in export value, pools, and NPP
             if target_poc is None:
@@ -389,19 +501,21 @@ def score_npzd(target: str, parameter_list: list[str], model_xr: dict[str, xr.Da
                 error_opal = (abs(sim_df - target_opal)/target_opal if sim_df < target_opal_min or sim_df > target_opal_max else 0.0)
 
             bulk_errors = 1 + error_npp + error_poc + error_caco3 + error_opal
+            stability_error = 1 + stability_level_dic + stability_level_alk + stability_level_po4 + stability_level_sio + stability_level_no3
 
             # Combine errors. If dic, alk, po4, and sio are perfect or not used,
             # then the total error is just the export and NPP error. Else, the export and NPP error
             # are used as a multiplier for the other errors.
             main_error = error_dic + error_alk  + error_po4 + error_sio + error_no3
             if main_error == 0:
-                total_error = bulk_errors - 1
+                total_error = stability_error*(bulk_errors - 1)
             else:
-                total_error = bulk_errors*main_error
+                total_error = stability_error*bulk_errors*main_error
 
-            print(f"Total error is {total_error}")
-            print (f"error_dic: {error_dic}, error_alk: {error_alk}, error_po4: {error_po4}, error_sio: {error_sio}, error_no3: {error_no3}")
-            print (f"error_npp: {error_npp}, error_poc: {error_poc}, error_caco3: {error_caco3}, error_opal: {error_opal}")
+            logging.info(f"Total error is {total_error} for simulation {sim}")
+            logging.info (f"error_dic: {error_dic}, error_alk: {error_alk}, error_po4: {error_po4}, error_sio: {error_sio}, error_no3: {error_no3}")
+            logging.info (f"error_npp: {error_npp}, error_poc: {error_poc}, error_caco3: {error_caco3}, error_opal: {error_opal}")
+            logging.info (f"stability_level_dic: {stability_level_dic}, stability_level_alk: {stability_level_alk}, stability_level_po4: {stability_level_po4}, stability_level_sio: {stability_level_sio}, stability_level_no3: {stability_level_no3}")
 
             if total_error > 20:
                 total_error = 1e6

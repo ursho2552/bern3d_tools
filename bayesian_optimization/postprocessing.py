@@ -95,7 +95,7 @@ def main(configuration_file, simulation_names) -> None:
 if __name__ in "__main__":
 
     # Parse command line arguments
-    # python postprocessing.py --config_file bayesian_optimization/config_salt_temp_ida_amoc.yaml --simulation_name Reference,NPZD_no3Alone_00_000,NPZD_no3Alone_01_000,NPZD_no3Alone_02_000,NPZD_no3Alone_03_000,NPZD_no3Alone_04_000,NPZD_no3Alone_05_000,NPZD_no3Alone_06_000,NPZD_no3Alone_07_000,NPZD_no3Alone_08_000,NPZD_no3Alone_09_000,NPZD_no3Alone_10_000,NPZD_no3Alone_11_000,NPZD_no3Alone_12_000,NPZD_no3Alone_13_000,NPZD_no3Alone_14_000,NPZD_no3Alone_15_000,NPZD_no3Alone_16_000,NPZD_no3Alone_17_000,NPZD_no3Alone_18_000,NPZD_no3Alone_19_000,NPZD_no3Alone_20_000,NPZD_no3Alone_21_000,NPZD_no3Alone_22_000,NPZD_no3Alone_23_000,NPZD_no3Alone_24_000,NPZD_no3Alone_25_000,NPZD_no3Alone_26_000,NPZD_no3Alone_27_000,NPZD_no3Alone_28_000,NPZD_no3Alone_29_000
+    # python postprocessing.py --config_file bayesian_optimization/config_salt_temp_ida_amoc.yaml --simulation_name Reference,Wind_00_000,Wind_01_000,Wind_02_000,Wind_03_000,Wind_04_000,Wind_05_000,Wind_06_000,Wind_07_000,Wind_08_000,Wind_09_000,Wind_10_000,Wind_11_000,Wind_12_000,Wind_13_000,Wind_14_000,Wind_15_000,Wind_16_000,Wind_17_000,Wind_18_000,Wind_19_000,Wind_20_000,Wind_21_000,Wind_22_000,Wind_23_000,Wind_24_000,Wind_25_000,Wind_26_000,Wind_27_000,Wind_28_000,Wind_29_000
     logging.basicConfig(level=logging.INFO)
     parser = argparse.ArgumentParser(description='Postprocessing for Bayesian optimization module')
     parser.add_argument('--config_file', required=True, type=str,
