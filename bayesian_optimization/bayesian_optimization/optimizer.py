@@ -324,7 +324,7 @@ def score_temp_salt_amoc_ida(target: str, parameter_list: list[str],
                 amoc_sim = sim.replace("_full_ave.nc", "_timeseries_ave.nc")
                 ds_amoc = xr.open_dataset(amoc_sim, decode_times=False)
                 sim_amoc = ds_amoc['OPSIA_max'][-1].values
-                error_amoc = 1 + (abs(sim_amoc - target_amoc)/target_amoc if sim_amoc < target_amoc_min or sim_amoc > target_amoc_max else 0.0)
+                error_amoc = (abs(sim_amoc - target_amoc) if sim_amoc < target_amoc_min or sim_amoc > target_amoc_max else 0.0)
 
             # Combine errors. If temperature, salinity and ideal age are perfect or not used,
             # then the total error is just the AMOC error. Else, the amoc error is used as a multiplier
@@ -333,9 +333,9 @@ def score_temp_salt_amoc_ida(target: str, parameter_list: list[str],
             stability_error = 1 + stability_level_temp + stability_level_salt + stability_level_ida
 
             if main_error == 0:
-                total_error = stability_error*(error_amoc - 1)
+                total_error = stability_error*error_amoc if error_amoc > 1 else stability_error
             else:
-                total_error = stability_error*error_amoc*main_error
+                total_error = (stability_error*main_error) + error_amoc
 
             logging.info(f"Total error is {total_error} for simulation {sim}")
             logging.info(f"error_temp: {error_temp}, error_salt: {error_salt}, error_ida: {error_ida}, error_amoc: {error_amoc}")
