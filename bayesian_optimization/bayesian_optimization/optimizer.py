@@ -759,10 +759,10 @@ def check_optimization_status(optimizer: Optimizer, iteration: int,
         optimization_done = True
 
     # Check if the error has been reduced by more than 95% compared to the first error
-    if iteration > 1:
-        if optimizer.get_result().fun <= optimizer.first_error*threshold:
-            logging.info("Error reduced by more than 95%, stopping the optimization")
-            optimization_done = True
+    # if iteration > 1:
+    #     if optimizer.get_result().fun <= optimizer.first_error*threshold:
+    #         logging.info("Error reduced by more than 95%, stopping the optimization")
+    #         optimization_done = True
     # Check if the error has been reduced by more than 95% compared to the first error
 
     # Check if the optimizer has improved in the last max_stable_iterations
