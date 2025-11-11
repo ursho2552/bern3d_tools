@@ -735,19 +735,19 @@ def compute_and_tell_optimizer(optimizer: Optimizer, target: str,
 
     # Add penalty to failed simulations
     corrected_mae = correct_failed_simulations(optimizer, test_df_clean, target)
-
     tested_parameters = test_df_clean[parameter_list].values.tolist()
     optimizer.tell(tested_parameters, corrected_mae)
     logging.info("Told new parameters to optimizer")
 
     # Correct indeces to match only simulation names
     corrected_index = []
-    for index in test_df.index:
+    for index in test_df_clean.index:
         corrected_index.append(index.split("/")[-1].split(".")[0])
 
-    test_df.index = corrected_index
+    test_df_clean.index = corrected_index
+    test_df_clean[f"mae_{target.lower()}"] = corrected_mae
 
-    return test_df, optimizer
+    return test_df_clean, optimizer
 
 def check_optimization_status(optimizer: Optimizer, iteration: int,
                               max_iteration: int = 10) -> bool:

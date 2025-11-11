@@ -4,12 +4,9 @@
 These are the utility functions used in the Bayesian optimization module.
 """
 import os
-import re
 import glob
-import shutil
 import logging
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Optional, Union
 
 import xarray as xr
