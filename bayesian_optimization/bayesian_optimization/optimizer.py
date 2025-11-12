@@ -280,9 +280,6 @@ def score_temp_salt_amoc_ida(target: str, parameter_list: list[str],
             raw_w = scale * cell_volume
             weight = raw_w / np.nansum(raw_w)
 
-            # volume =  model_ds.boxvol
-            # weight_1 = (volume/volume.sum()).values
-
             # Calculate the MAE for temperature
             if 'temp' in target.lower():
                 sim_df = model_ds[sim_variable_name_temp].values
@@ -746,6 +743,13 @@ def compute_and_tell_optimizer(optimizer: Optimizer, target: str,
 
     test_df_clean.index = corrected_index
     test_df_clean[f"mae_{target.lower()}"] = corrected_mae
+    # add Reference row at the top if it was removed and write the index as Reference
+    for index_str in test_df.index:
+        if "Reference" in index_str:
+            reference_row = test_df.loc[index_str]
+            reference_row.name = "Reference"
+            test_df_clean = pd.concat([pd.DataFrame([reference_row]), test_df_clean])
+            break
 
     return test_df_clean, optimizer
 
