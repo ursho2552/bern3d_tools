@@ -597,9 +597,12 @@ def correct_failed_simulations(optimizer: Optimizer, df: pd.DataFrame,
     target_values[target_values == 1e6] = np.nan
     penalty = standard_penalty*np.nanmean(target_values)
 
-    error_values = optimizer.get_result().func_vals
-    if len(error_values) >= optimizer.get_result().specs['args']['n_initial_points']:
-        penalty = standard_penalty*np.mean(error_values)
+    try:
+        error_values = optimizer.get_result().func_vals
+        if len(error_values) >= optimizer.get_result().specs['args']['n_initial_points']:
+            penalty = standard_penalty*np.mean(error_values)
+    except:
+        penalty = standard_penalty*np.nanmean(target_values)
 
     # Add a soft-penalty for failed simulations
     print(f"Using a penalty of {penalty} for failed simulations.")
@@ -728,6 +731,7 @@ def compute_and_tell_optimizer(optimizer: Optimizer, target: str,
             break
 
     # Add penalty to failed simulations
+    print(test_df_clean)
     corrected_mae = correct_failed_simulations(optimizer, test_df_clean, target)
     tested_parameters = test_df_clean[parameter_list].values.tolist()
     print(tested_parameters)
