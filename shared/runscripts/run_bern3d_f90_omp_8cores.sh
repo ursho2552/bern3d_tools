@@ -5,9 +5,15 @@
 #SBATCH --account=invest
 #SBATCH --partition=icpu-poeppelmeier
 #SBATCH --qos=job_icpu-poeppelmeier
+#SBATCH --nodes=1
 #SBATCH --mem=2G
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
+
+##SBATCH --job-name=Reference
+##SBATCH --chdir=/storage/scratch/users/uh24x373/Optimization_wind_test_new/run
+##SBATCH --mail-user=uh24x373@campus.unibe.ch
+
 
 # Load modules
 module load intel/2023a
