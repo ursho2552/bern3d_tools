@@ -2,6 +2,7 @@
 #SBATCH --mail-type=end,fail
 #SBATCH --output="%x.out"
 #SBATCH --error="%x.out"
+#SBATCH --account=invest
 #SBATCH --partition=icpu-poeppelmeier
 #SBATCH --qos=job_icpu-poeppelmeier
 #SBATCH --mem=2G

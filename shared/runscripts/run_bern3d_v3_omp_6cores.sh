@@ -1,5 +1,6 @@
 #!/bin/bash
 #SBATCH --mail-type=end,fail
+#SBATCH --account=invest
 #SBATCH --partition=icpu-poeppelmeier
 #SBATCH --qos=job_icpu-poeppelmeier
 #SBATCH --nodes=1

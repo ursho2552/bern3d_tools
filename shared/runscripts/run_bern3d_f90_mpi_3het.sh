@@ -5,18 +5,22 @@
 ######################################
 # I/O task
 #SBATCH --cpus-per-task=1 --mem-per-cpu=2g --ntasks=1
+#SBATCH --account=invest
 #SBATCH --partition=icpu-poeppelmeier
 #SBATCH --qos=job_icpu-poeppelmeier
 
 # Ocean task (OpenMP enabled)
 #SBATCH hetjob
 #SBATCH --cpus-per-task=6 --mem-per-cpu=1g --ntasks=1
+#SBATCH --account=invest
 #SBATCH --partition=icpu-poeppelmeier
 #SBATCH --qos=job_icpu-poeppelmeier
 
 # Atmosphere task
 #SBATCH hetjob
 #SBATCH --cpus-per-task=1 --mem-per-cpu=2g --ntasks=1
+#SBATCH --account=paygo
+#SBATCH --wckey=CLIMATE_bgc
 #SBATCH --partition=epyc2
 #SBATCH --qos=job_cpu
 
