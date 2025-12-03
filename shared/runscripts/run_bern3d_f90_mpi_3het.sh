@@ -20,7 +20,7 @@
 #SBATCH hetjob
 #SBATCH --cpus-per-task=1 --mem-per-cpu=2g --ntasks=1
 #SBATCH --account=paygo
-#SBATCH --wckey=CLIMATE_bgc
+#SBATCH --wckey=climate_gbc
 #SBATCH --partition=epyc2
 #SBATCH --qos=job_cpu
 
