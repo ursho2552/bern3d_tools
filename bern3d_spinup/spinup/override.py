@@ -33,6 +33,7 @@ override_dictionary = {
         'bgc_opt1': True,
         'bgc_opt2': True,
         'bgc_opt3': True,
-        'bgc_opt4': True
+        'bgc_opt4': True,
+        'bgc_opt5': True
     }
 }

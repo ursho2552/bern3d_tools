@@ -65,6 +65,7 @@ def main(configuration_file: str, email: str, analyze_runs: bool = False) -> Non
                                                 new_name=new_name,
                                                 work_dir=my_config.work_directory,
                                                 restart_files=my_config.bern3d_restart_files)
+                print(run_directory)
 
                 if parameter is not None:
                     # Update the parameter file with the new parameter value
@@ -72,7 +73,7 @@ def main(configuration_file: str, email: str, analyze_runs: bool = False) -> Non
                     list_parameter_files = my_config.bern3d_parameter_file.split(",")
                     for param_file_template in list_parameter_files:
 
-                        parameter_dict, preserved_lines = shared_utils.parse_to_dict(file_path=param_file_template)
+                        parameter_dict, preserved_lines = shared_utils.parse_to_dict(file_path=f"{run_directory}/{new_name}{param_file_template}")
 
                         # Adapt value
                         parameter_dict = shared_utils.adapt_dictionary(config_dict=parameter_dict,
