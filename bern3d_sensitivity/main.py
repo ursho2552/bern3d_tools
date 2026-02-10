@@ -82,7 +82,7 @@ def main(configuration_file: str, email: str, analyze_runs: bool = False) -> Non
                                                         factor=factor)
 
                         # Create new parameter file
-                        tmp = shared_utils.create_new_parameter_file(config_dict=parameter_dict,
+                        _ = shared_utils.create_new_parameter_file(config_dict=parameter_dict,
                                                                 parameter_file_name=full_path,
                                                                 preserved_lines=preserved_lines)
 
