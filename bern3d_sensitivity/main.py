@@ -73,7 +73,8 @@ def main(configuration_file: str, email: str, analyze_runs: bool = False) -> Non
                     list_parameter_files = my_config.bern3d_parameter_file.split(",")
                     for param_file_template in list_parameter_files:
 
-                        parameter_dict, preserved_lines = shared_utils.parse_to_dict(file_path=f"{run_directory}/{new_name}{param_file_template}")
+                        full_path = f"{run_directory}/{new_name}{param_file_template}"
+                        parameter_dict, preserved_lines = shared_utils.parse_to_dict(file_path=full_path)
 
                         # Adapt value
                         parameter_dict = shared_utils.adapt_dictionary(config_dict=parameter_dict,
@@ -81,9 +82,10 @@ def main(configuration_file: str, email: str, analyze_runs: bool = False) -> Non
                                                         factor=factor)
 
                         # Create new parameter file
-                        _ = shared_utils.create_new_parameter_file(config_dict=parameter_dict,
-                                                                parameter_file_name=param_file_template,
+                        tmp = shared_utils.create_new_parameter_file(config_dict=parameter_dict,
+                                                                parameter_file_name=full_path,
                                                                 preserved_lines=preserved_lines)
+
 
                 # Submit the job
                 model_job_id = shared_utils.submit_job(script_template=my_config.bern3d_run_script,
