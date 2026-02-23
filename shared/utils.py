@@ -328,7 +328,7 @@ def infer_type(value:str, reset: Optional[bool] = False) -> Union[str, int, floa
 
 def adapt_dictionary(config_dict: dict[str, Union[str, int, float]],
                      parameter: Union[list[str], str],
-                     factor: float,
+                     factor: float = 1.0,
                      new_value: Union[list[Union[int, float]], Union[int, float]] = None) -> dict[str, Union[str, int, float]]:
 
     """
