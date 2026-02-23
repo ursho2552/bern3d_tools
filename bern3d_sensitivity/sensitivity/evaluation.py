@@ -47,11 +47,20 @@ def analyze_sensitivity_results(config: ConfigFile,
             raise FileNotFoundError(f"Reference file {ref_file} not found")
 
     # Analyze each parameter variation
+    parameter_factor_dict = config.parameter_list
+
     for parameter in parameter_list:
         if parameter is None:  # Skip the None entry used for reference
             continue
 
-        for variation in ["Low", "High"]:
+        if isinstance(parameter_factor_dict[parameter], list):
+            change_factors = parameter_factor_dict[parameter]
+            names = [f"{str(factor).replace('.','p')}" for factor in change_factors]
+
+        else:
+            names = ["Low", "High"]
+
+        for variation in names:
             run_name = f"{variation}_{parameter}"
 
             # Analyze each target field
@@ -140,6 +149,10 @@ def calculate_sensitivity_metrics(var_data: xr.DataArray, ref_data: xr.DataArray
     # Determine data dimensions
     dims = len(var_data.dims)
     dimension_info = f"{dims}D: {list(var_data.dims)}"
+
+    # check if variable has a p surrounded by numbers, if so replace with . for better readability
+    if "p" in variation and any(char.isdigit() for char in variation):
+        variation = variation.replace("p", ".")
 
     return {
         'parameter': parameter,
