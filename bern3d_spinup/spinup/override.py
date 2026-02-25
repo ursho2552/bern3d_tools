@@ -29,11 +29,14 @@ override_dictionary = {
     "phase_3": {
         'rundesc': "Spinup Phase 3",
         'lin_name': "Spinup2.00001765",
+        'diag_atmtemp_opt': True,
         'atmCTRLpert': True,
         'bgc_opt1': True,
         'bgc_opt2': True,
         'bgc_opt3': True,
         'bgc_opt4': True,
-        'bgc_opt5': True
+        'bgc_opt5': True,
+        'bgc_opt7': True,
+        'bgc_opt8': True
     }
 }
