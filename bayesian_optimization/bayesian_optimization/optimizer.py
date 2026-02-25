@@ -243,7 +243,7 @@ def score_temp_salt_amoc_ida(target: str, parameter_list: list[str],
     sim_variable_name_salt = "S"
 
     obs_df_ida = ds_target["ida"].values
-    sim_variable_name_ida = "ida"
+    sim_variable_name_ida = "IdealAge"
 
     composite_scores: dict[str, float] = {}
     param_ref_dic: dict[str, dict[str, float]] = {}
