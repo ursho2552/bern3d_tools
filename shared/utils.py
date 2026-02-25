@@ -139,7 +139,8 @@ def copy_template_files(exec_name: str, new_name: str,
             continue
 
         # Skip files belonging to other executables
-        if any(name.startswith(prefix) for prefix in exec_names if prefix != exec_name):
+        condition = any(name.startswith(prefix) for prefix in exec_names if prefix != exec_name)
+        if condition and not name.startswith(exec_name):
             continue
 
         # Ignore parameter files in case executable is not present
@@ -157,11 +158,11 @@ def copy_template_files(exec_name: str, new_name: str,
         if name.startswith(exec_name) or not any(name.startswith(prefix) for prefix in exec_names):
             dest = work_dir / new_filename
             if dest.exists():
-                logging.warning(f"File already exists, not copying: {name} -> {new_filename}")
+                logging.info(f"File already exists, not copying: {name} -> {new_filename}")
                 continue
             shutil.copy2(file, dest)
             copied_files.append(dest)
-            logging.warning(f"Copied: {name} -> {new_filename}")
+            logging.info(f"Copied: {name} -> {new_filename}")
 
     # Replacement within text files
     for file_path in copied_files:
@@ -173,7 +174,7 @@ def copy_template_files(exec_name: str, new_name: str,
         if exec_name in text:
             new_text = text.replace(exec_name, new_name)
             file_path.write_text(new_text)
-            logging.warning(f"Replaced '{exec_name}' with '{new_name}' in: {file_path.name}")
+            logging.info(f"Replaced '{exec_name}' with '{new_name}' in: {file_path.name}")
 
 def copy_output_files(source_dir: str, result_dir: str, pattern: str = "*") -> None:
     """
