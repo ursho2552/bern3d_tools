@@ -91,6 +91,8 @@ class ConfigParameters:
     parameter_bounds: dict[str, tuple[float, float]]
     fixed_values: dict[str, float]
 
+    use_penalty: bool
+
     # Path to file with parameters to be optimized
     bern3d_parameter_file: str
     bern3d_restart_files: str
@@ -103,6 +105,8 @@ class ConfigParameters:
     batchsize: int
     acquisitition_optimizer: str
     job_number: int
+
+    variable_names: dict[str, dict[str, Optional[str]]]
 
 def check_configuration(config_dataclass: ConfigParameters) -> ConfigParameters:
     """

@@ -1,7 +1,7 @@
 # Example of configuration file tuning NPZD paremeters with the targets of
 # DIC, Alk, Po4, SiO, Opal, CaCO3 and POC export, and NPP.
 
-config_file_path: "/storage/homefs/uh24x373/bgc_bern/bern3d_tools/bayesian_optimization/bayesian_optimization/config_npzd.yaml"
+config_file_path: "/storage/homefs/uh24x373/bgc_bern/bern3d_tools/bayesian_optimization/config_files/config_npzd.yaml"
 
 # Provide the paths where this scripts can be found. They should all be in the directory of this module
 bern3d_script: "/storage/homefs/uh24x373/bgc_bern/bern3d_tools/shared/runscripts/run_bern3d_f90_omp_8cores.sh"
@@ -43,6 +43,7 @@ bern3d_template: "/storage/scratch/users/uh24x373/bern3d_f90/run/"
 validation_data_path: "/storage/scratch/users/uh24x373/bern3d_f90/run/"
 
 # The number of iterations to run the Bayesian optimization algorithm
+use_reference_simulation: True
 max_iterations: 100
 max_stable_iterations: 15
 
@@ -57,7 +58,6 @@ target_values:
  target_npp: 60.0
 
 # Path to file with parameters to be optimized
-use_reference_simulation: False
 bern3d_parameter_file: ".npzd.parameter"
 bern3d_restart_files: "/storage/scratch/users/uh24x373/bern3d_f90/results/Spinup2*"
 
@@ -77,6 +77,8 @@ parameter_bounds:
 
 fixed_values: {}
 
+use_penalty: False
+
 initialization_type: "random"
 tuning_target: "dic_alk_po4_sio_npp_poc_caco3_opal"
 n_initialization: 10
@@ -85,3 +87,45 @@ acquisition_type: "gp_hedge"
 batchsize: 30
 acquisitition_optimizer: "auto"
 job_number: -1
+
+# Standard Bern3D setup for optimization
+variable_names:
+  dic:
+    sim: "DIC"
+    obs: "dic"
+  alk:
+    sim: "ALK"
+    obs: "alk"
+  po4:
+    sim: "PO4"
+    obs: "po4"
+  sio:
+    sim: "SiO"
+    obs: "sio"
+  no3:
+    sim: "NO3"
+    obs: "no3"
+  temp:
+    sim: "TEMP"
+    obs: "temp"
+  salt:
+    sim: "S"
+    obs: "salt"
+  ida:
+    sim: "IdealAge"
+    obs: "ida"
+  amoc:
+    sim: "OPSIA_max"
+    obs: !!python/none
+  npp:
+    sim: "NPZD_NPP"
+    obs: !!python/none
+  poc:
+    sim: "EXPORT_POM"
+    obs: !!python/none
+  caco3:
+    sim: "EXPORT_CACO3"
+    obs: !!python/none
+  opal:
+    sim: "Export_OPAL"
+    obs: !!python/none

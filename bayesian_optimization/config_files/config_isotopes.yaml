@@ -1,7 +1,7 @@
 # Example of configuration file tuning adsorption desorption parameters for
 # Pa and Th isotopes.
 
-config_file_path: "/storage/homefs/uh24x373/bgc_bern/bayesian_optimization/bayesian_optimization/config_isotopes.yaml"
+config_file_path: "/storage/homefs/uh24x373/bgc_bern/bayesian_optimization/config_files/config_isotopes.yaml"
 
 # Provide the paths where this scripts can be found. They should all be in the directory of this module
 bern3d_script: "/storage/homefs/uh24x373/bgc_bern/shared/runscripts/run_bern3d_v3_omp_6cores.sh"
@@ -46,6 +46,7 @@ validation_data_path: "/storage/research/climate_climtip/testorf/data/"
 use_reference_simulation: False
 max_iterations: 100
 max_stable_iterations: 15
+
 # Targets for POC, CaCO3 and NPP in Pg C yr-1
 # Targets for Opal in Tg Si yr-1
 # Targets for amoc in °C
@@ -72,6 +73,8 @@ parameter_bounds:
 
 fixed_values: {}
 
+use_penalty: False
+
 initialization_type: "lhs"
 isotope: "Pad"
 n_initialization: 10
@@ -80,3 +83,45 @@ acquisition_type: "EI"
 batchsize: 3
 acquisitition_optimizer: "auto"
 job_number: -1
+
+# Standard Bern3D setup for optimization
+variable_names:
+  dic:
+    sim: "DIC"
+    obs: "dic"
+  alk:
+    sim: "ALK"
+    obs: "alk"
+  po4:
+    sim: "PO4"
+    obs: "po4"
+  sio:
+    sim: "SiO"
+    obs: "sio"
+  no3:
+    sim: "NO3"
+    obs: "no3"
+  temp:
+    sim: "TEMP"
+    obs: "temp"
+  salt:
+    sim: "S"
+    obs: "salt"
+  ida:
+    sim: "IdealAge"
+    obs: "ida"
+  amoc:
+    sim: "OPSIA_max"
+    obs: !!python/none
+  npp:
+    sim: "NPZD_NPP"
+    obs: !!python/none
+  poc:
+    sim: "EXPORT_POM"
+    obs: !!python/none
+  caco3:
+    sim: "EXPORT_CACO3"
+    obs: !!python/none
+  opal:
+    sim: "Export_OPAL"
+    obs: !!python/none

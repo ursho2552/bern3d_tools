@@ -230,20 +230,22 @@ def score_temp_salt_amoc_ida(target: str, parameter_list: list[str],
     # get target values from kwargs
     target_amoc = kwargs.get('target_amoc', None)
 
+    variable_names_dict = kwargs.get('variable_names', None)
+
     # Open the NetCDF observations file and convert target variable to DataFrame
     target_file = f"{validation_data_path}/world_68x46.observations.nc"
     assert os.path.exists(target_file), f"{target_file} file does not exist."
 
     ds_target = xr.open_dataset(target_file)
 
-    obs_df_temp = ds_target["temp"].values
-    sim_variable_name_temp = "TEMP"
+    obs_df_temp = ds_target[variable_names_dict["temp"]["obs"]].values
+    sim_variable_name_temp = variable_names_dict["temp"]["sim"]
 
-    obs_df_salt = ds_target["salt"].values
-    sim_variable_name_salt = "S"
+    obs_df_salt = ds_target[variable_names_dict["salt"]["obs"]].values
+    sim_variable_name_salt = variable_names_dict["salt"]["sim"]
 
-    obs_df_ida = ds_target["ida"].values
-    sim_variable_name_ida = "IdealAge"
+    obs_df_ida = ds_target[variable_names_dict["ida"]["obs"]].values
+    sim_variable_name_ida = variable_names_dict["ida"]["sim"]
 
     composite_scores: dict[str, float] = {}
     param_ref_dic: dict[str, dict[str, float]] = {}
@@ -320,7 +322,7 @@ def score_temp_salt_amoc_ida(target: str, parameter_list: list[str],
             if 'amoc' in target.lower():
                 amoc_sim = sim.replace("_full_ave.nc", "_timeseries_ave.nc")
                 ds_amoc = xr.open_dataset(amoc_sim, decode_times=False)
-                sim_amoc = ds_amoc['OPSIA_max'][-1].values
+                sim_amoc = ds_amoc[variable_names_dict["amoc"]["sim"]][-1].values
                 error_amoc = (abs(sim_amoc - target_amoc)/target_amoc if sim_amoc < target_amoc_min or sim_amoc > target_amoc_max else 0.0)
 
             # Combine errors. If temperature, salinity and ideal age are perfect or not used,
@@ -370,6 +372,8 @@ def score_npzd(target: str, parameter_list: list[str], model_xr: dict[str, xr.Da
     target_opal = kwargs.get('target_opal', None)
     target_npp = kwargs.get('target_npp', None)
 
+    variable_names_dict = kwargs.get('variable_names', None)
+
     # Here, we score the NPZD model output against observed DIC, PO4, NO3, and the overall NPP and
     # POC, opal, and CaCO3 export at 120 m depth.
 
@@ -379,20 +383,20 @@ def score_npzd(target: str, parameter_list: list[str], model_xr: dict[str, xr.Da
 
     ds_target = xr.open_dataset(target_file, decode_times=False)
 
-    obs_df_dic = ds_target["dic"].values
-    sim_variable_name_dic = "DIC"
+    obs_df_dic = ds_target[variable_names_dict["dic"]["obs"]].values
+    sim_variable_name_dic = variable_names_dict["dic"]["sim"]
 
-    obs_df_alk = ds_target["alk"].values
-    sim_variable_name_alk = "ALK"
+    obs_df_alk = ds_target[variable_names_dict["alk"]["obs"]].values
+    sim_variable_name_alk = variable_names_dict["alk"]["sim"]
 
-    obs_df_po4 = ds_target["po4"].values
-    sim_variable_name_po4 = "PO4"
+    obs_df_po4 = ds_target[variable_names_dict["po4"]["obs"]].values
+    sim_variable_name_po4 = variable_names_dict["po4"]["sim"]
 
-    obs_df_sio = ds_target["sio"].values
-    sim_variable_name_sio = "SiO"
+    obs_df_sio = ds_target[variable_names_dict["sio"]["obs"]].values
+    sim_variable_name_sio = variable_names_dict["sio"]["sim"]
 
-    obs_df_no3 = ds_target["no3"].values
-    sim_variable_name_no3 = "NO3"
+    obs_df_no3 = ds_target[variable_names_dict["no3"]["obs"]].values
+    sim_variable_name_no3 = variable_names_dict["no3"]["sim"]
 
     # Can have dic, alk, po4, poc, caco3, opal, npp
     composite_scores: dict[str, float] = {}
@@ -485,16 +489,16 @@ def score_npzd(target: str, parameter_list: list[str], model_xr: dict[str, xr.Da
             nsecyr = 365*24*60*60  # seconds per year
             if 'npp' in target.lower():
                 # Get the NPP and multiply with area 12.01 and nsecyr to get total NPP
-                sim_df = np.nansum(model_ds["NPZD_NPP"][-1].values*area*factor_C*nsecyr)/1e15  # in Pg C yr-1
+                sim_df = np.nansum(model_ds[variable_names_dict["npp"]["sim"]][-1].values*area*factor_C*nsecyr)/1e15  # in Pg C yr-1
                 error_npp = (abs(sim_df - target_npp)/target_npp if sim_df < target_npp_min or sim_df > target_npp_max else 0.0)
             if 'poc' in target.lower():
-                sim_df = np.nansum(model_ds["EXPORT_POM"][-1].values*area*factor_C*nsecyr)/1e15  # in Pg C yr-1
+                sim_df = np.nansum(model_ds[variable_names_dict["poc"]["sim"]][-1].values*area*factor_C*nsecyr)/1e15  # in Pg C yr-1
                 error_poc = (abs(sim_df - target_poc)/target_poc if sim_df < target_poc_min or sim_df > target_poc_max else 0.0)
             if 'caco3' in target.lower():
-                sim_df = np.nansum(model_ds["EXPORT_CACO3"][-1].values*area*factor_C*nsecyr)/1e15 # in Pg C yr-1
+                sim_df = np.nansum(model_ds[variable_names_dict["caco3"]["sim"]][-1].values*area*factor_C*nsecyr)/1e15 # in Pg C yr-1
                 error_caco3 = (abs(sim_df - target_caco3)/target_caco3 if sim_df < target_caco3_min or sim_df > target_caco3_max else 0.0)
             if 'opal' in target.lower():
-                sim_df = np.nansum(model_ds["EXPORT_OPAL"][-1].values*area*nsecyr)/1e12 # in Tmol Si yr-1
+                sim_df = np.nansum(model_ds[variable_names_dict["opal"]["sim"]][-1].values*area*nsecyr)/1e12 # in Tmol Si yr-1
                 error_opal = (abs(sim_df - target_opal)/target_opal if sim_df < target_opal_min or sim_df > target_opal_max else 0.0)
 
             bulk_errors = 1 + error_npp + error_poc + error_caco3 + error_opal
@@ -691,6 +695,8 @@ def compute_and_tell_optimizer(optimizer: Optimizer, target: str,
     tuple: Dataframe with calculated parameters and score for all simulations and updated optimizer.
     """
 
+    use_penalty = kwargs.get('use_penalty', False)
+
     if not isinstance(parameter_list, list):
         parameter_list = [parameter_list]
 
@@ -722,7 +728,6 @@ def compute_and_tell_optimizer(optimizer: Optimizer, target: str,
     test_df = calculate_score_df(target, parameter_list, simulation_dict, simulation_names,
                                  validation_data_path, parameter_files, log_files, **kwargs)
 
-
     # Remove reference in test_df if it exists
     test_df_clean = test_df.copy()
     for index_str in test_df.index:
@@ -730,12 +735,27 @@ def compute_and_tell_optimizer(optimizer: Optimizer, target: str,
             test_df_clean = test_df.drop(index=index_str)
             break
 
+    if use_penalty:
+        # Add penalty to failed simulations
+        corrected_mae = correct_failed_simulations(optimizer, test_df_clean, target)
+        tested_parameters = test_df_clean[parameter_list].values.tolist()
+
+    else:
+        # Simply remove failed simulations
+        target_values = test_df_clean[f"mae_{target.lower()}"].values
+        failed_mask = target_values == 1e6
+        successful_indices =  failed_mask == False
+        if np.any(successful_indices):
+            test_df_clean = test_df_clean[successful_indices]
+            tested_parameters = test_df_clean[parameter_list].values.tolist()
+            corrected_mae = test_df_clean[f"mae_{target.lower()}"].values.tolist()
+            logging.info(f"Removed {np.sum(failed_mask)} failed simulations")
+            logging.info(f"Using {len(corrected_mae)} successful simulations")
+        else:
+            logging.warning("All simulations failed! Cannot update optimizer.")
+            return test_df_clean, optimizer
+
     # Add penalty to failed simulations
-    print(test_df_clean)
-    corrected_mae = correct_failed_simulations(optimizer, test_df_clean, target)
-    tested_parameters = test_df_clean[parameter_list].values.tolist()
-    print(tested_parameters)
-    print(corrected_mae)
     optimizer.tell(tested_parameters, corrected_mae)
     logging.info("Told new parameters to optimizer")
 
