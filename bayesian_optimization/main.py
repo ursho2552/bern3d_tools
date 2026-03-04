@@ -77,6 +77,11 @@ def main(configuration_file: str, current_iteration: int, email: str) -> None:
 
             parameter_list = list(my_config.parameter_bounds.keys())
             # adapt how targets are passed to compute_and_tell_optimizer, since they should be passed as kwargs
+            function_kwargs = {
+                'variable_names': my_config.variable_names,
+                'use_penalty': my_config.use_penalty,
+                **my_config.target_values
+                }
 
             initial_df, my_optimizer = bo.compute_and_tell_optimizer(optimizer = my_optimizer,
                                                                      target = my_config.tuning_target,
@@ -84,7 +89,7 @@ def main(configuration_file: str, current_iteration: int, email: str) -> None:
                                                                      simulation_dict = simulation_dictionary,
                                                                      validation_data_path = my_config.validation_data_path,
                                                                      parameter_file_template = my_config.bern3d_parameter_file,
-                                                                     **my_config.target_values)
+                                                                     **function_kwargs)
 
             initial_df.to_csv(f"{my_config.output_dir_optimizer}/{my_config.tuning_target}_df_simulations.csv")
 
