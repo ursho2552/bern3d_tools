@@ -1,0 +1,29 @@
+# Path to the bern3D executable without the name
+bern3d_template: "/storage/scratch/users/uh24x373/Particle_flux/run"
+# Name of the executable
+bern3d_executable_name: "Spinup3"
+# Name of parameter file containing parameters to change
+bern3d_parameter_file: ".bgc.parameter"
+# Path to restart files:
+bern3d_restart_files: "/storage/scratch/users/uh24x373/Particle_flux/results/Spinup2*"
+# List of parameters to change
+parameter_list:
+  k_POC: [1.5e-6, 4.0e-6]
+  SinkVel_scale: [0.5, 1.5]
+  phi_lg: [0.85, 0.98]
+  aE: [0.05, 0.25]
+  sig1: [0.001, 0.015]
+  sig2: [0.0001, 0.005]
+  alphadenit: [-0.8, -0.01]
+  Tref: [10.0, 20.0]
+
+num_concurrent_jobs: 20
+num_samples: 120
+
+# Work directory
+work_directory: "/storage/scratch/users/uh24x373/lhs_particle_flux/"
+# Path to the sbatch script
+bern3d_run_script: "/storage/homefs/uh24x373/bgc_bern/bern3d_tools/shared/runscripts/run_bern3d_f90_mpi_4het.sh"
+main_script_path: "/storage/homefs/uh24x373/bgc_bern/bern3d_tools/bern3d_lhs/"
+# Time
+time_bern3d: "24:00:00"
