@@ -119,7 +119,7 @@ time_evaluation: "01:00:00"
 
 3. **Run the sensitivity analysis:**
    ```bash
-   python main.py --configuration_name config_files/sensitivity_setup.yaml
+   python main.py --config_file=config_files/sensitivity_setup.yaml
    ```
    Optional arguments:
    - `--email`: Email address for job notifications (default: system username)
