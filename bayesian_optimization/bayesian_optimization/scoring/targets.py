@@ -47,10 +47,29 @@ class PhysicsTarget(ScoringTarget):
               **kwargs) -> pd.DataFrame:
         """ Compute the score based on physical metrics.
 
+            This method computes a composite score based on the errors in temperature, salinity,
+            IDA, and AMOC metrics, as well as their stability levels. The score is designed to
+            penalize both large errors and instability in the model outputs compared to the
+            validation data. The method also checks if the simulation has finished before computing
+            the score, assigning a high error score if it has not.
+
+            Parameters:
+                parameter_list: List of parameter set names.
+                model_xr: Dictionary of xarray Datasets for each simulation.
+                sims: List of simulation names corresponding to the model_xr keys.
+                validation_data_path: Path to the validation data file.
+                parameter_files: List of file paths for the parameter sets.
+                log_files: List of file paths for the simulation logs.
+                **kwargs: Additional keyword arguments for scoring, such as target AMOC value and
+                    variable names.
+
+            Returns:
+                DataFrame with parameters and their corresponding composite scores.
+
         """
 
         # Get target value for amoc in case it is specified from kwargs
-        target_amoc: float | None = kwargs.get("target_amoc", 15.5)
+        target_amoc: float = kwargs.get("target_amoc", 15.5)
         variable_names_dict: dict[str, dict[str, str]] | None = kwargs.get("variable_names_dict", None)
 
         # Get validation data from file
@@ -173,13 +192,151 @@ class NPZDTarget(ScoringTarget):
               **kwargs) -> pd.DataFrame:
         """ Compute the score based on NPZD metrics.
 
-        This method should be implemented to compute the score based on the specific NPZD metric.
         """
-        # Placeholder implementation
-        scores = [0.0] * len(parameter_list)  # Dummy scores for demonstration
-        params = {param: {} for param in parameter_list}  # Dummy parameters for demonstration
 
-        return self._prepare_dataframe(scores, params)
+        # Get target values from kwargs
+        target_poc: float = kwargs.get("target_poc", 9.7)
+        target_caco3: float = kwargs.get("target_caco3", 1.9)
+        target_opal: float = kwargs.get("target_opal", 190.0)
+        target_npp: float = kwargs.get("target_npp", 60.0)
+
+        variable_names_dict: dict[str, dict[str, str]] | None = kwargs.get("variable_names_dict", None)
+
+        # Get validation data from file
+        assert os.path.exists(validation_data_path), f"Validation data file not found: {validation_data_path}"
+        ds_target = xr.open_dataset(validation_data_path)
+
+        # Extract variables from validation data
+        ds_dic_obs = ds_target[variable_names_dict["dic"]["obs"]].values
+        ds_alk_obs = ds_target[variable_names_dict["alk"]["obs"]].values
+        ds_po4_obs = ds_target[variable_names_dict["po4"]["obs"]].values
+        ds_sio_obs = ds_target[variable_names_dict["sio"]["obs"]].values
+        ds_no3_obs = ds_target[variable_names_dict["no3"]["obs"]].values
+
+        # Extract variable names for model outputs
+        sim_variable_name_dic: str = variable_names_dict["dic"]["sim"]
+        sim_variable_name_alk: str = variable_names_dict["alk"]["sim"]
+        sim_variable_name_po4: str = variable_names_dict["po4"]["sim"]
+        sim_variable_name_sio: str = variable_names_dict["sio"]["sim"]
+        sim_variable_name_no3: str = variable_names_dict["no3"]["sim"]
+
+        # Prepare scores and parameter dictionaries
+        composite_scores: dict[str, float] = {}
+        param_ref_dic: dict[str, dict[str, float]] = {}
+
+        for i, (sim, log_file, param_file) in enumerate(zip(sims, log_files, parameter_files)):
+
+            if simulation_finished(log_file):
+                error_dic = 0.0
+                error_alk = 0.0
+                error_po4 = 0.0
+                error_sio = 0.0
+                error_no3 = 0.0
+                error_poc = 0.0
+                error_caco3 = 0.0
+                error_opal = 0.0
+                error_npp = 0.0
+
+                stability_level_dic = 0.0
+                stability_level_alk = 0.0
+                stability_level_po4 = 0.0
+                stability_level_sio = 0.0
+                stability_level_no3 = 0.0
+
+                ds_model = model_xr[sim]
+                area = ds_model.area.values
+
+                # Calculate the MAE for targets
+                # TODO uhe 01/05/2026: This is very repetitive and could be refactored to be more concise, but for now this is easier to compare with previous verison
+
+                if 'dic' in self.name:
+                    ds_sim = ds_model[sim_variable_name_dic].isel(time=-1).values * 1000
+                    error_dic = nrmse(ds_sim, ds_dic_obs, 1)
+                    stability_level_dic = get_field_stability(ds=ds_model,
+                                                            var_name=sim_variable_name_dic,
+                                                            depth_level=0, window=10,
+                                                            time_dim="time")
+                if 'alk' in self.name:
+                    sim_df = ds_model[sim_variable_name_alk].isel(time=-1).values * 1000
+                    error_alk = nrmse(sim_df, ds_alk_obs, 1)
+                    stability_level_alk = get_field_stability(ds=ds_model,
+                                                            var_name=sim_variable_name_alk,
+                                                            depth_level=0, window=10,
+                                                            time_dim="time")
+                if 'po4' in self.name:
+                    sim_df = ds_model[sim_variable_name_po4].isel(time=-1).values * 1000
+                    error_po4 = nrmse(sim_df, ds_po4_obs, 1)
+                    stability_level_po4 = get_field_stability(ds=ds_model,
+                                                            var_name=sim_variable_name_po4,
+                                                            depth_level=0, window=10,
+                                                            time_dim="time")
+                if 'sio' in self.name:
+                    sim_df = ds_model[sim_variable_name_sio].isel(time=-1).values * 1000
+                    error_sio = nrmse(sim_df, ds_sio_obs, 1)
+                    stability_level_sio = get_field_stability(ds=ds_model,
+                                                            var_name=sim_variable_name_sio,
+                                                            depth_level=0, window=10,
+                                                            time_dim="time")
+                if 'no3' in self.name:
+                    sim_df = ds_model[sim_variable_name_no3].isel(time=-1).values * 1000
+                    error_no3 = nrmse(sim_df, ds_no3_obs, 1)
+                    stability_level_no3 = get_field_stability(ds=ds_model,
+                                                            var_name=sim_variable_name_no3,
+                                                            depth_level=0, window=10,
+                                                            time_dim="time")
+
+                # Calculate difference in export value, pools, and NPP
+                factor_C = 12.01  # g C per mol C
+                nsecyr = 365*24*60*60  # seconds per year
+                if 'npp' in self.name:
+                    # Get the NPP and multiply with area 12.01 and nsecyr to get total NPP
+                    target_npp_min = target_npp - 17
+                    target_npp_max = target_npp + 17
+                    sim_df = np.nansum(ds_model[variable_names_dict["npp"]["sim"]][-1].values*area*factor_C*nsecyr)/1e15  # in Pg C yr-1
+                    error_npp = (abs(sim_df - target_npp)/target_npp if sim_df < target_npp_min or sim_df > target_npp_max else 0.0)
+
+                if 'poc' in self.name:
+                    target_poc_min = target_poc - 0.25
+                    target_poc_max = target_poc + 0.25
+                    sim_df = np.nansum(ds_model[variable_names_dict["poc"]["sim"]][-1].values*area*factor_C*nsecyr)/1e15  # in Pg C yr-1
+                    error_poc = (abs(sim_df - target_poc)/target_poc if sim_df < target_poc_min or sim_df > target_poc_max else 0.0)
+
+                if 'caco3' in self.name:
+                    target_caco3_min = target_caco3 - 0.3
+                    target_caco3_max = target_caco3 + 0.3
+                    sim_df = np.nansum(ds_model[variable_names_dict["caco3"]["sim"]][-1].values*area*factor_C*nsecyr)/1e15 # in Pg C yr-1
+                    error_caco3 = (abs(sim_df - target_caco3)/target_caco3 if sim_df < target_caco3_min or sim_df > target_caco3_max else 0.0)
+
+                if 'opal' in self.name:
+                    target_opal_min = target_opal - 52
+                    target_opal_max = target_opal + 52
+                    sim_df = np.nansum(ds_model[variable_names_dict["opal"]["sim"]][-1].values*area*nsecyr)/1e12 # in Tmol Si yr-1
+                    error_opal = (abs(sim_df - target_opal)/target_opal if sim_df < target_opal_min or sim_df > target_opal_max else 0.0)
+
+                bulk_errors = 1 + error_npp + error_poc + error_caco3 + error_opal
+                stability_error = 1 + stability_level_dic + stability_level_alk + stability_level_po4 + stability_level_sio + stability_level_no3
+
+                # Combine errors. If dic, alk, po4, and sio are perfect or not used,
+                # then the total error is just the export and NPP error. Else, the export and NPP error
+                # are used as a multiplier for the other errors.
+                main_error = error_dic + error_alk  + error_po4 + error_sio + error_no3
+                if main_error == 0:
+                    total_error = stability_error*(bulk_errors - 1)
+                else:
+                    total_error = stability_error*bulk_errors*main_error
+
+                if total_error > 20:
+                    total_error = 1e6
+                elif total_error < 0:
+                    total_error = 1e6
+
+                composite_scores[sim] = total_error
+
+            else:
+                composite_scores[sim] = 1e6  # Assign a high error score if simulation is not finished
+                logging.warning(f"Simulation '{sim}' is not finished. Assigned high error score.")
+
+        return self._prepare_dataframe(composite_scores, param_ref_dic)
 
 class IsotopeTarget(ScoringTarget):
     """ Scoring target based on isotope metrics. """
