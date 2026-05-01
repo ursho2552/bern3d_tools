@@ -1,3 +1,11 @@
+"""
+This module defines the base class for scoring targets in the Bayesian optimization framework. The
+ScoringTarget class is an abstract base class that requires implementing classes to define a name
+property and a score method. The score method is responsible for computing the score based on the
+given parameters, model outputs, and validation data. The module also includes a helper method to
+prepare the final DataFrame with scores and parameters for further analysis.
+"""
+
 import pandas as pd
 import xarray as xr
 from abc import ABC, abstractmethod
@@ -5,9 +13,8 @@ from abc import ABC, abstractmethod
 class ScoringTarget(ABC):
     """ Base class for scoring targets in Bayesian optimization."""
 
-    def __init__(self, name: str, validation_data_path: str):
-        self.name = name
-        self.validation_data_path = validation_data_path
+    def __init__(self, name: str):
+        self.name = name.lower()
 
     @abstractmethod
     def score(self, parameter_list: list[str], model_xr: dict[str, xr.Dataset],

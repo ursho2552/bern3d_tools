@@ -1,5 +1,11 @@
 """
+This module defines the ScoringTargetProtocol, which specifies the interface for scoring target in
+the Bayesian optimization framework.
 
+This protocol requires implementing classes with a name property and a score method. The score
+method takes in a list of parameters, model output dictionary, simulation names, a validation data
+path, parameter files, log files, and any additional keyword arguments. The method should return a
+DataFrame containing a specific structure (TBD)
 """
 
 from typing import Protocol
