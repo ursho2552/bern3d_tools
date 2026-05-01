@@ -47,6 +47,6 @@ class ScoringTarget(ABC):
         """
         score_df = pd.DataFrame({self.name: scores})
         param_df = pd.DataFrame.from_dict(params, orient="index")
-        param_df[f"score_{self.name.lower()}"] = param_df.index.map(score_df[self.name])
+        param_df[f"mae_{self.name.lower()}"] = param_df.index.map(score_df[self.name])
 
         return param_df

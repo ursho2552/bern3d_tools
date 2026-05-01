@@ -13,7 +13,7 @@ import numpy as np
 
 from .protocols import ScoringTargetProtocol
 from .base import ScoringTarget
-from .utils import simulation_finished, nrmse, get_field_stability, get_config_value
+from .utils import simulation_finished, nrmse, get_field_stability, get_config_value, find_nearest
 
 class TargetRegistry:
     """Registry for default and custom scoring targets."""
@@ -33,10 +33,14 @@ class TargetRegistry:
         return cls._targets[name]
 
     @classmethod
-    def create(cls, name: str, **kwargs) -> ScoringTargetProtocol:
+    def create(cls, registry_name: str, **kwargs) -> ScoringTargetProtocol:
         """Create an instance of a target."""
-        target_class = cls.get(name)
+        target_class = cls.get(registry_name)
         return target_class(**kwargs)
+
+    @classmethod
+    def list_targets(cls) -> list[str]:
+        return list(cls._targets.keys())
 
 class PhysicsTarget(ScoringTarget):
     """ Scoring target based on physical metrics. """
@@ -70,7 +74,7 @@ class PhysicsTarget(ScoringTarget):
 
         # Get target value for amoc in case it is specified from kwargs
         target_amoc: float = kwargs.get("target_amoc", 15.5)
-        variable_names_dict: dict[str, dict[str, str]] | None = kwargs.get("variable_names_dict", None)
+        variable_names_dict: dict[str, dict[str, str]] | None = kwargs.get("variable_names", None)
 
         # Get validation data from file
         assert os.path.exists(validation_data_path), f"Validation data file not found: {validation_data_path}"
@@ -151,8 +155,9 @@ class PhysicsTarget(ScoringTarget):
                     target_amoc_min = target_amoc - 0.5
                     target_amoc_max = target_amoc + 0.5
                     # Get AMOC timeseries from model output (TODO uhe 01/05/2026: this is currently hardcoded and should be made more flexible)
-                    sim_amoc = sim.replace("_full_ave.nc", "_timeseries_ave.nc")
-                    ds_amoc = xr.open_dataset(sim_amoc, decode_times=False)
+                    file_amoc = sim.replace("_full_ave.nc", "_timeseries_ave.nc")
+                    ds_amoc = xr.open_dataset(file_amoc, decode_times=False)
+                    sim_amoc = ds_amoc[variable_names_dict["amoc"]["sim"]][-1].values
 
                     error_amoc = (abs(sim_amoc - target_amoc)/target_amoc if sim_amoc < target_amoc_min or sim_amoc > target_amoc_max else 0.0)
 
@@ -192,6 +197,26 @@ class NPZDTarget(ScoringTarget):
               **kwargs) -> pd.DataFrame:
         """ Compute the score based on NPZD metrics.
 
+            This method computes a composite score based on the errors in DIC, alkalinity,
+            phosphate, silicate, nitrate, as well as errors in export production (POC, CaCO3, opal)
+            and NPP, and their stability levels. The score is designed to penalize both large errors
+            and instability in the model outputs compared to the validation data. The method also
+            checks if the simulation has finished before computing the score, assigning a high error
+            score if it has not.
+
+            Parameters:
+                parameter_list: List of parameter set names.
+                model_xr: Dictionary of xarray Datasets for each simulation.
+                sims: List of simulation names corresponding to the model_xr keys.
+                validation_data_path: Path to the validation data file.
+                parameter_files: List of file paths for the parameter sets.
+                log_files: List of file paths for the simulation logs.
+                **kwargs: Additional keyword arguments for scoring, such as target values for export
+                    production and NPP, and variable names.
+
+            Returns:
+                DataFrame with parameters and their corresponding composite scores.
+
         """
 
         # Get target values from kwargs
@@ -200,7 +225,7 @@ class NPZDTarget(ScoringTarget):
         target_opal: float = kwargs.get("target_opal", 190.0)
         target_npp: float = kwargs.get("target_npp", 60.0)
 
-        variable_names_dict: dict[str, dict[str, str]] | None = kwargs.get("variable_names_dict", None)
+        variable_names_dict: dict[str, dict[str, str]] | None = kwargs.get("variable_names", None)
 
         # Get validation data from file
         assert os.path.exists(validation_data_path), f"Validation data file not found: {validation_data_path}"
@@ -224,7 +249,7 @@ class NPZDTarget(ScoringTarget):
         composite_scores: dict[str, float] = {}
         param_ref_dic: dict[str, dict[str, float]] = {}
 
-        for i, (sim, log_file, param_file) in enumerate(zip(sims, log_files, parameter_files)):
+        for sim, log_file, param_file in zip(sims, log_files, parameter_files):
 
             if simulation_finished(log_file):
                 error_dic = 0.0
@@ -336,6 +361,10 @@ class NPZDTarget(ScoringTarget):
                 composite_scores[sim] = 1e6  # Assign a high error score if simulation is not finished
                 logging.warning(f"Simulation '{sim}' is not finished. Assigned high error score.")
 
+            param_ref_dic[sim] = {}
+            for param in parameter_list:
+                param_ref_dic[sim][param] = get_config_value(param_file, param)
+
         return self._prepare_dataframe(composite_scores, param_ref_dic)
 
 class IsotopeTarget(ScoringTarget):
@@ -347,13 +376,90 @@ class IsotopeTarget(ScoringTarget):
               **kwargs) -> pd.DataFrame:
         """ Compute the score based on isotope metrics.
 
-        This method should be implemented to compute the score based on the specific isotope metric.
-        """
-        # Placeholder implementation
-        scores = [0.0] * len(parameter_list)  # Dummy scores for demonstration
-        params = {param: {} for param in parameter_list}  # Dummy parameters for demonstration
+            This method computes a score based on the weighted mean absolute error (MAE) between the
+            model outputs and the validation data for a specific isotope target. The score is
+            designed to penalize large errors in the model outputs compared to the validation data,
+            with weights based on the standard deviation of the observations. The method also checks
+            if the simulation has finished before computing the score, assigning a high error score
+            if it has not.
 
-        return self._prepare_dataframe(scores, params)
+            Parameters:
+                parameter_list: List of parameter set names.
+                model_xr: Dictionary of xarray Datasets for each simulation.
+                sims: List of simulation names corresponding to the model_xr keys.
+                validation_data_path: Path to the validation data file.
+                parameter_files: List of file paths for the parameter sets.
+                log_files: List of file paths for the simulation logs.
+                **kwargs: Additional keyword arguments for scoring, such as variable names.
+
+            Returns:
+                DataFrame with parameters and their corresponding scores.
+
+        """
+
+        df_isotope_obs = pd.read_csv(validation_data_path)
+        composite_scores: dict[str, float] = {}
+        param_ref_dic: dict[str, dict[str, float]] = {}
+
+        for sim, log_file, param_file in zip(sims, log_files, parameter_files):
+
+            if simulation_finished(log_file):
+                composite_scores[sim] = self._compute_isotope_score(model_xr[sim], df_isotope_obs,
+                                                                    self.name)
+            else:
+                composite_scores[sim] = 1e6  # Assign a high error score if simulation is not finished
+                logging.warning(f"Simulation '{sim}' is not finished. Assigned high error score.")
+
+            # Extract parameters
+            param_ref_dic[sim] = {
+                param: get_config_value(param_file, param) for param in parameter_list
+            }
+
+        return self._prepare_dataframe(composite_scores, param_ref_dic)
+
+    def _compute_isotope_score(self, ds_model: xr.Dataset, df_isotope_obs: pd.DataFrame,
+                                target_name: str) -> float:
+
+        df_coords = pd.DataFrame({
+            "lon": df_isotope_obs["Longitude"].apply(
+                lambda x: find_nearest(ds_model.lon_t.values, x)),
+            "lat": df_isotope_obs["Latitude"].apply(
+                lambda x: find_nearest(ds_model.lat_t.values, x)),
+            "zt": df_isotope_obs["DEPTH [m]"].apply(
+                lambda x: find_nearest(ds_model.z_t.values, x))
+        })
+
+        # Extract and convert model data
+        model_last = ds_model.isel(time=-1)
+        var_model = self._convert_dpm_to_bq(model_last, target_name)
+
+        # Extract at observation points
+        obs_df = df_isotope_obs.copy()
+        obs_df[f'{target_name}_bern3d'] = df_coords.apply(
+            lambda row: var_model.isel(
+                lon_t=int(row['lon']),
+                lat_t=int(row['lat']),
+                z_t=int(row['zt'])
+            ).item(),
+            axis=1
+        )
+
+        # Compute weighted MAE
+        abs_err = abs(obs_df[f"{target_name}_obs"] - obs_df[f"{target_name}_bern3d"])
+        weight_err = abs_err / obs_df[f"{target_name}_std"]
+        mae = weight_err.sum() / (1 / obs_df[f"{target_name}_std"]).sum()
+
+        return float(mae)
+
+    @staticmethod
+    def _convert_dpm_to_bq(data: xr.Dataset, var: str) -> xr.DataArray:
+        """Convert from dpm to Bq.
+
+        This is a placeholder conversion function. The actual conversion will depend on the specific
+
+        """
+        return data[var] * 10**6 / (60 * data["rho_SI"])
+
 
 # Register default targets
 TargetRegistry.register("temp_salt_ida_amoc", PhysicsTarget)

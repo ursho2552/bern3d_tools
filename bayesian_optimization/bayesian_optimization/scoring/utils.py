@@ -1,3 +1,12 @@
+
+import logging
+import re
+from typing import Optional, Union
+import numpy as np
+import numpy.typing as npt
+import xarray as xr
+
+
 def simulation_finished(log_path: str) -> bool:
     """
     Returns True if 'SIMULATION COMPLETE' appears anywhere in the file.
@@ -10,7 +19,7 @@ def simulation_finished(log_path: str) -> bool:
     return False
 
 def nrmse(predictions: npt.ArrayLike, targets: npt.ArrayLike,
-          weights: Optional[npt.ArrayLike] = None) -> float:
+          weights: npt.ArrayLike | None = None) -> float:
     """
     Calculate the Normalized Root Mean Square Error (NRMSE) between predictions and targets.
 
@@ -53,6 +62,15 @@ def get_field_stability(ds: xr.Dataset, var_name: str, depth_level: Optional[int
 
     # Calculate rolling variance
     data = ds[var_name].isel(z_t=depth_level).mean(dim=("lat_t", "lon_t"))
+
+    # Decrease the window if it is larger then the length of the time dimension
+    if window >= data.sizes[time_dim]:
+        logging.warning(f"Rolling window size {window} is larger than or equal to the length of the"
+                         f" time dimension {data.sizes[time_dim]}. Reducing window size to"
+                         f" {data.sizes[time_dim] - 1}.")
+
+        window = data.sizes[time_dim] - 1 if data.sizes[time_dim] % 2 == 0 else data.sizes[time_dim]
+
     data_variance = data.rolling({time_dim: window}, center=True).var()
 
     # Remove NaN values at the beginning and end due to rolling window
@@ -78,7 +96,7 @@ def get_field_stability(ds: xr.Dataset, var_name: str, depth_level: Optional[int
     min_stable_length = int(total_length * min_stable_fraction)
 
     # Find the lowest threshold where there's a point after which all remaining points are below it
-    # and the stable period is at least min_stable_fraction of total time 
+    # and the stable period is at least min_stable_fraction of total time
     for thr in threshold:
         below_threshold = no_nan_variance < thr
         if np.any(below_threshold):
@@ -138,3 +156,30 @@ def get_config_value(path: Union[str, list[str]], param: str):
                     return v.strip('"').strip("'")
 
     raise KeyError(f"No parameter named {param!r} in {path!r}")
+
+def find_nearest(array: npt.ArrayLike, value: float,
+                 retval: Optional[int] = 1) -> Union[float, int, tuple[float, int]]:
+    """
+    Find the nearest value in an array to a given value.
+
+    Parameters:
+    array (np.array): Array to search.
+    value (float): Value to find the nearest to.
+    retval (int): Determines the return value (0: nearest value, 1: index, 2: both).
+
+    Returns:
+    float or int or tuple: Nearest value, index, or both.
+    """
+    # Perform safety checks and convert array to numpy array
+    assert retval in [0, 1, 2], "Return value must be 0, 1, or 2."
+    assert not np.isnan(value), "Value must not be NaN."
+    if not isinstance(array, np.ndarray):
+        array = np.asarray(array)
+
+    idx = int((np.abs(array - value)).argmin())
+    if retval == 2:
+        return array[idx], idx
+    if retval == 1:
+        return idx
+
+    return array[idx]
