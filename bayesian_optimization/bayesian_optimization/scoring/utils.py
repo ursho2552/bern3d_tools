@@ -1,15 +1,26 @@
+"""
+This module contains utility functions for the scoring of simulations in the context of Bayesian
+optimization. It includes functions to check if a simulation has finished, calculate the normalized
+root mean square error (NRMSE) between predictions and targets, assess the stability of a field in a
+ dataset, retrieve configuration values from files, and find the nearest value in an array to a
+ given value.
+"""
 
 import logging
 import re
-from typing import Optional, Union
+from typing import Optional
 import numpy as np
 import numpy.typing as npt
 import xarray as xr
 
-
 def simulation_finished(log_path: str) -> bool:
-    """
-    Returns True if 'SIMULATION COMPLETE' appears anywhere in the file.
+    """ Returns True if 'SIMULATION COMPLETE' appears anywhere in the file.
+
+        Parameters:
+            log_path (str): Path to the log file.
+
+        Returns:
+            bool: True if the simulation is complete, False otherwise.
     """
     needle = "SIMULATION COMPLETE"
     with open(log_path, 'r', encoding='utf-8') as my_file:
@@ -20,15 +31,14 @@ def simulation_finished(log_path: str) -> bool:
 
 def nrmse(predictions: npt.ArrayLike, targets: npt.ArrayLike,
           weights: npt.ArrayLike | None = None) -> float:
-    """
-    Calculate the Normalized Root Mean Square Error (NRMSE) between predictions and targets.
+    """ Calculate the Normalized Root Mean Square Error (NRMSE) between predictions and targets.
 
-    Parameters:
-    predictions (np.array): Predicted values.
-    targets (np.array): Target values.
+        Parameters:
+            predictions (np.array): Predicted values.
+            targets (np.array): Target values.
 
-    Returns:
-    float: NRMSE value.
+        Returns:
+            float: NRMSE value, where lower values indicate better performance.
     """
     assert len(predictions) == len(targets), "Predictions and targets must have the same length."
     weights = 1 if weights is None else weights
@@ -43,19 +53,18 @@ def get_field_stability(ds: xr.Dataset, var_name: str, depth_level: Optional[int
                         window: Optional[int] = 11,
                         time_dim: Optional[str] = "time",
                         min_stable_fraction: Optional[float] = 0.2) -> float:
-    """
-    Calculate the stability level of a field in a dataset.
+    """ Calculate the stability level of a field in a dataset.
 
-    Parameters:
-    ds (xr.Dataset): Input dataset containing the variable
-    var_name (str): Name of the variable to analyze
-    depth_level (int): Depth level index to select (default: 0)
-    window (int): Rolling window size (default: 10)
-    time_dim (str): Name of the time dimension (default: "time")
-    min_stable_fraction (float): Minimum fraction of total time that must be stable (default: 0.2)
+        Parameters:
+            ds (xr.Dataset): Input dataset containing the variable
+            var_name (str): Name of the variable to analyze
+            depth_level (int): Depth level index to select (default: 0)
+            window (int): Rolling window size (default: 10)
+            time_dim (str): Name of the time dimension (default: "time")
+            min_stable_fraction (float): Minimum fraction of total time that must be stable (default: 0.2)
 
-    Returns:
-    float: Stability threshold (0.005-1.0), where lower values indicate higher stability
+        Returns:
+        float: Stability threshold (0.005-1.0), where lower values indicate higher stability
     """
     # Ensure odd window size for symmetric rolling window
     window = window + 1 if window % 2 == 0 else window
@@ -86,7 +95,7 @@ def get_field_stability(ds: xr.Dataset, var_name: str, depth_level: Optional[int
         return 1.0
 
     relative_variance = data_variance_clean / max_variance
-    valid_mask = ~np.isnan(relative_variance)
+    valid_mask = np.isnan(relative_variance) == False
     no_nan_variance = relative_variance[valid_mask]
 
     if len(no_nan_variance) == 0:
@@ -110,16 +119,15 @@ def get_field_stability(ds: xr.Dataset, var_name: str, depth_level: Optional[int
 
     return 1.0
 
-def get_config_value(path: Union[str, list[str]], param: str):
-    """
-    Get the value of a parameter from a configuration file.
+def get_config_value(path: str | list[str], param: str):
+    """ Get the value of a parameter from a configuration file.
 
-    Parameters:
-    path (str or list[str]): Path to the configuration file.
-    param (str): Parameter name to retrieve.
+        Parameters:
+            path (str or list[str]): Path to the configuration file.
+            param (str): Parameter name to retrieve.
 
-    Returns:
-    str or int or float: Value of the parameter.
+        Returns:
+            str or int or float: Value of the parameter.
     """
     if not isinstance(path, list):
         path = [path]
@@ -158,17 +166,16 @@ def get_config_value(path: Union[str, list[str]], param: str):
     raise KeyError(f"No parameter named {param!r} in {path!r}")
 
 def find_nearest(array: npt.ArrayLike, value: float,
-                 retval: Optional[int] = 1) -> Union[float, int, tuple[float, int]]:
-    """
-    Find the nearest value in an array to a given value.
+                 retval: Optional[int] = 1) -> float | int | tuple[float, int]:
+    """ Find the nearest value in an array to a given value.
 
-    Parameters:
-    array (np.array): Array to search.
-    value (float): Value to find the nearest to.
-    retval (int): Determines the return value (0: nearest value, 1: index, 2: both).
+        Parameters:
+            array (np.array): Array to search.
+            value (float): Value to find the nearest to.
+            retval (int): Determines the return value (0: nearest value, 1: index, 2: both).
 
-    Returns:
-    float or int or tuple: Nearest value, index, or both.
+        Returns:
+            float or int or tuple: Nearest value, index, or both.
     """
     # Perform safety checks and convert array to numpy array
     assert retval in [0, 1, 2], "Return value must be 0, 1, or 2."
