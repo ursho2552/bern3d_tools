@@ -15,6 +15,7 @@ from .protocols import ScoringTargetProtocol
 from .base import ScoringTarget
 from .utils import simulation_finished, nrmse, get_field_stability, get_config_value, find_nearest
 
+# TODO uhe 04/05/2026: Consider importing constants for failed simulations and such
 class TargetRegistry:
     """Registry for default and custom scoring targets."""
 
@@ -210,7 +211,7 @@ class PhysicsTarget(ScoringTarget):
             else:
                 # Assign a high error score if simulation is not finished
                 composite_scores[sim] = 1e6
-                logging.warning(f"Simulation '{sim}' is not finished. Assigned high error score.")
+                logging.warning("Simulation '%s' is not finished. Assigned high error score.", sim)
 
             param_ref_dic[sim] = {}
             for param in parameter_list:
@@ -390,7 +391,7 @@ class NPZDTarget(ScoringTarget):
 
             else:
                 composite_scores[sim] = 1e6  # Assign a high error score if simulation is not finished
-                logging.warning(f"Simulation '{sim}' is not finished. Assigned high error score.")
+                logging.warning("Simulation '%s' is not finished. Assigned high error score.", sim)
 
             param_ref_dic[sim] = {}
             for param in parameter_list:

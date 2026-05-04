@@ -17,8 +17,6 @@ from .scoring.base import SCORE_COLUMN
 
 # Constants
 FAILED_SIMULATION_SCORE = 1e6
-# TODO uhe 0405/2026: Consider putting the reference simulation name somewhere else, as it is
-# accessed in the main script as well
 REFERENCE_SIM_NAME = "Reference"
 DEFAULT_PENALTY_MULTIPLIER = 2.0
 
@@ -114,7 +112,7 @@ def _handle_failed_simulations_with_penalty(df: pd.DataFrame, optimizer: Optimiz
     target_values[target_values == FAILED_SIMULATION_SCORE] = np.nan
 
     penalty = _compute_penalty(optimizer, target_values, multiplier)
-    logging.info(f"Using penalty of {penalty:.4f} for failed simulations")
+    logging.info("Using penalty of %.4f for failed simulations", penalty)
 
     corrected_scores = np.where(np.isnan(target_values), penalty, target_values)
 
@@ -141,7 +139,7 @@ def _handle_failed_simulations_by_removal(df: pd.DataFrame) -> tuple[list[float]
 
     n_failed = np.sum(failed_mask)
     if n_failed > 0:
-        logging.info(f"Removed {n_failed} failed simulation(s)")
+        logging.info("Removed %d failed simulation(s)", n_failed)
 
     # Keep only successful simulations
     successful_mask = failed_mask == False
@@ -154,7 +152,7 @@ def _handle_failed_simulations_by_removal(df: pd.DataFrame) -> tuple[list[float]
     param_columns = [col for col in df_success.columns if col != SCORE_COLUMN]
     parameters = df_success[param_columns].values.tolist()
 
-    logging.info(f"Using {len(scores)} successful simulation(s)")
+    logging.info("Using %d successful simulation(s)", len(scores))
     return scores, parameters, df_success
 
 def _simplify_indices(df: pd.DataFrame) -> pd.DataFrame:
