@@ -27,4 +27,6 @@ __all__ = [
     'access_file',
     'check_configuration',
     'ConfigParameters',
+    'TargetRegistry',
+    'ScoringTarget',
 ]

@@ -18,6 +18,9 @@ import numpy as np
 import bern3d_tools.shared.utils as shared_utils
 import bayesian_optimization as bo
 
+# TODO uhe 04/05/2026: Test this with a simple custom target to make sure the registry and everything works as expected
+# class MyCustomTarget(bo.ScoringTarget):
+#     pass
 
 def main(configuration_file: str, current_iteration: int, email: str) -> None:
     """Execute one iteration of Bayesian optimization.
@@ -33,6 +36,9 @@ def main(configuration_file: str, current_iteration: int, email: str) -> None:
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
+
+    # Add custom target example to registry
+    # bo.TargetRegistry.register(MyCustomTarget, aliases=["custom"])
 
     parser = argparse.ArgumentParser(description='Run Bayesian optimization of Bern3D parameters')
     parser.add_argument('--config_file', required=True, type=str,
