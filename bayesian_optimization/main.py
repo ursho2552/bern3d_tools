@@ -6,7 +6,8 @@ This file initializes the `bayesian_optimization` module.
 # ==================================================================================================
 # Add the grand-parent directory (repo root) to sys.path to import functions from the shared module
 # ==================================================================================================
-import os, sys
+import os
+import sys
 # add the grand-parent dir (repo root) to sys.path
 repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir))
 if repo_root not in sys.path:
@@ -104,7 +105,7 @@ def main(configuration_file: str, current_iteration: int, email: str) -> None:
     # Vary the number of points to test based on the current iteration and error relative to the
     # first error (if available)
     strategy = "cl_max"
-    if not 'first_error' in  dir(my_optimizer):
+    if 'first_error' not in  dir(my_optimizer):
         logging.info("Asking for initial parameters to test")
         num_points = my_config.batchsize
         my_optimizer.stable_iterations = 0

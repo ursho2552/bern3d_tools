@@ -19,18 +19,46 @@ class TargetRegistry:
     """Registry for default and custom scoring targets."""
 
     _targets: dict[str, type[ScoringTargetProtocol]] = {}
+    _aliases: dict[str, str] = {}
 
     @classmethod
-    def register(cls, name: str, target_class: type[ScoringTargetProtocol]) -> None:
+    def register(cls, name: str, target_class: type[ScoringTargetProtocol],
+                 aliases: list[str] | None = None) -> None:
         """Register a target class."""
         cls._targets[name] = target_class
+        cls._aliases[name] = name
+
+        if aliases:
+            for alias in aliases:
+                cls._aliases[alias.lower()] = name
 
     @classmethod
     def get(cls, name: str) -> type[ScoringTargetProtocol]:
-        """Get a registered target class."""
-        if name not in cls._targets:
-            raise ValueError(f"Target '{name}' not registered")
-        return cls._targets[name]
+        """Get a registered target class by checking if any alias appears in name."""
+        name_lower = name.lower()
+
+        # Check if alias appears in the target string
+        matches = {}  # canonical_name -> list of matching aliases
+        for alias, canonical_name in cls._aliases.items():
+            if alias in name_lower:
+                if canonical_name not in matches:
+                    matches[canonical_name] = []
+                matches[canonical_name].append(alias)
+
+        if len(matches) == 0:
+            raise ValueError(
+                f"Target '{name}' not registered. No alias found in target string. "
+                f"Available aliases: {sorted(set(cls._aliases.keys()))}"
+            )
+        elif len(matches) > 1:
+            raise ValueError(
+                f"Target '{name}' is ambiguous - matches multiple classes: {list(matches.keys())}. "
+                f"Matching aliases: {matches}"
+            )
+
+        # Single match found
+        canonical_name = list(matches.keys())[0]
+        return cls._targets[canonical_name]
 
     @classmethod
     def create(cls, registry_name: str, **kwargs) -> ScoringTargetProtocol:
@@ -57,7 +85,7 @@ class PhysicsTarget(ScoringTarget):
             validation data. The method also checks if the simulation has finished before computing
             the score, assigning a high error score if it has not.
 
-            Parameters:
+            Args:
                 parameter_list: List of parameter set names.
                 model_xr: Dictionary of xarray Datasets for each simulation.
                 sims: List of simulation names corresponding to the model_xr keys.
@@ -77,7 +105,8 @@ class PhysicsTarget(ScoringTarget):
         variable_names_dict: dict[str, dict[str, str]] | None = kwargs.get("variable_names", None)
 
         # Get validation data from file
-        assert os.path.exists(validation_data_path), f"Validation data file not found: {validation_data_path}"
+        assert os.path.exists(validation_data_path), (f"Validation data file not found: "
+                                                      f"{validation_data_path}")
         ds_target = xr.open_dataset(validation_data_path)
 
         # Extract variables from validation data
@@ -94,7 +123,7 @@ class PhysicsTarget(ScoringTarget):
         composite_scores: dict[str, float] = {}
         param_ref_dic: dict[str, dict[str, float]] = {}
 
-        for i, (sim, log_file, param_file) in enumerate(zip(sims, log_files, parameter_files)):
+        for sim, log_file, param_file in zip(sims, log_files, parameter_files):
 
             if simulation_finished(log_file):
                 # Set initial values for score components
@@ -179,7 +208,8 @@ class PhysicsTarget(ScoringTarget):
                 composite_scores[sim] = total_error
 
             else:
-                composite_scores[sim] = 1e6  # Assign a high error score if simulation is not finished
+                # Assign a high error score if simulation is not finished
+                composite_scores[sim] = 1e6
                 logging.warning(f"Simulation '{sim}' is not finished. Assigned high error score.")
 
             param_ref_dic[sim] = {}
@@ -272,7 +302,8 @@ class NPZDTarget(ScoringTarget):
                 area = ds_model.area.values
 
                 # Calculate the MAE for targets
-                # TODO uhe 01/05/2026: This is very repetitive and could be refactored to be more concise, but for now this is easier to compare with previous verison
+                # TODO uhe 01/05/2026: This is very repetitive and could be refactored to be more
+                # concise, but for now this is easier to compare with previous verison
 
                 if 'dic' in self.name:
                     ds_sim = ds_model[sim_variable_name_dic].isel(time=-1).values * 1000
@@ -455,13 +486,23 @@ class IsotopeTarget(ScoringTarget):
     def _convert_dpm_to_bq(data: xr.Dataset, var: str) -> xr.DataArray:
         """Convert from dpm to Bq.
 
-        This is a placeholder conversion function. The actual conversion will depend on the specific
+            Args:
+                data: Dataset containing the variable to convert.
+                var: Name of the variable to convert.
 
+            Returns:
+                Converted variable in Bq.
         """
         return data[var] * 10**6 / (60 * data["rho_SI"])
 
 
 # Register default targets
-TargetRegistry.register("temp_salt_ida_amoc", PhysicsTarget)
-TargetRegistry.register("npzd", NPZDTarget)
-TargetRegistry.register("isotope", IsotopeTarget)
+TargetRegistry.register("physics", PhysicsTarget,
+                        aliases=["temp", "salt", "ida", "amoc",
+                                 "temp_salt_ida_amoc", "temperature", "salinity"])
+
+TargetRegistry.register("npzd", NPZDTarget,
+                        aliases=["npzd", "dic", "alk", "po4", "sio", "no3", "poc",
+                                 "caco3", "opal", "npp"]
+)
+TargetRegistry.register("isotope", IsotopeTarget, aliases=["pad", "thd", "isotopes"])

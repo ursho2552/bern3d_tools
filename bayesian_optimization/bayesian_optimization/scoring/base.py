@@ -23,7 +23,7 @@ class ScoringTarget(ABC):
               **kwargs) -> pd.DataFrame:
         """ Compute the score for the given parameters and model outputs.
 
-            Parameters:
+            Args:
                 parameter_list: List of parameter set names.
                 model_xr: Dictionary of xarray Datasets for each simulation.
                 sims: List of simulation names corresponding to the model_xr keys.
@@ -31,6 +31,7 @@ class ScoringTarget(ABC):
                 parameter_files: List of file paths for the parameter sets.
                 log_files: List of file paths for the simulation logs.
                 **kwargs: Additional keyword arguments for scoring.
+
             Returns:
                 DataFrame with parameters and scores.
         """
@@ -40,9 +41,10 @@ class ScoringTarget(ABC):
                            params: dict[str, dict[str, float]]) -> pd.DataFrame:
         """Helper method to prepare the final DataFrame with scores and parameters.
 
-            Parameters::
+            Args:
                 scores: List of computed scores for each parameter set.
                 params: Dictionary of parameters with parameter set names as keys.
+
             Returns:
                 DataFrame combining parameters and their corresponding scores.
         """

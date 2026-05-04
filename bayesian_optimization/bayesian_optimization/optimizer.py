@@ -5,9 +5,7 @@ This is the optimizer script for the Bayesian optimization module.
 """
 import os
 
-import re
 import logging
-from typing import Union
 
 from pathlib import Path
 import pandas as pd
@@ -40,22 +38,8 @@ def calculate_score_df(target: str, parameter_list: list[str],
             pd.DataFrame: Dataframe with calculated parameters and score for all simulations.
     """
 
-    # Map old target strings to registry names
-    if target in ["Pad", "Thd"]:
-        registry_name = "isotope"
-    elif any(t in target.lower() for t in ["temp", "salt", 'amoc', 'ida']):
-        registry_name = "temp_salt_ida_amoc"
-    elif any(t in target.lower() for t in ["dic", "alk", "po4", "sio", "no3", "poc", "caco3",
-                                           "opal", "npp"]):
-        registry_name = "npzd"
-    else:
-        raise ValueError("Target must be the isotopes 'Pad' and/or 'Thd', the variables 'temp'"
-                         " and/or 'salt', or the variables 'dic', 'alk', 'po4', 'sio', 'poc', "
-                         " 'caco3', 'opal', 'npp'.")
-
-    # Create target instance and score
-    scoring_target = TargetRegistry.create(registry_name, name=target)
-    param_df = scoring_target.score(
+    scoring_target = TargetRegistry.create(target, name=target)
+    return scoring_target.score(
         parameter_list=parameter_list,
         model_xr=model_xr,
         sims=sims,
@@ -64,7 +48,7 @@ def calculate_score_df(target: str, parameter_list: list[str],
         log_files=log_files,
         **kwargs
     )
-    return param_df
+
 
 def correct_failed_simulations(optimizer: Optimizer, df: pd.DataFrame,
                                target: str, standard_penalty: float = 2.0) -> list[float]:
