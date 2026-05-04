@@ -3,7 +3,6 @@
 """
 This is the optimizer script for the Bayesian optimization module.
 """
-import os
 
 import logging
 
@@ -14,191 +13,248 @@ import numpy as np
 from skopt import Optimizer
 
 from .scoring.targets import TargetRegistry
+from .scoring.base import SCORE_COLUMN
 
+# Constants
+FAILED_SIMULATION_SCORE = 1e6
+# TODO uhe 0405/2026: Consider putting the reference simulation name somewhere else, as it is
+# accessed in the main script as well
+REFERENCE_SIM_NAME = "Reference"
+DEFAULT_PENALTY_MULTIPLIER = 2.0
 
-def calculate_score_df(target: str, parameter_list: list[str],
-                       model_xr: dict[str, xr.Dataset], sims: list[str],
-                       validation_data_path: str,
-                       parameter_files: list[str],
-                       log_files: list[str],
-                       **kwargs: float) -> pd.DataFrame:
-    """ Calculate the parameter dataframe for a given target and multiple simulations.
+def _build_file_paths(simulation_names: list[str],
+                      param_template: str) -> tuple[list[list[str]], list[str]]:
+    """Build parameter file and log file paths for simulations.
 
-        Parameters:
-            target (str): Target type ("Pad", "Thd", "Temperature", "Salinity").
-            parameter_list (list): List of parameters to calculate.
-            model_xr (dict): Dictionary of model datasets.
-            sims (list): List of simulation names.
-            validation_data_path (str): Path to the validation data.
-            parameter_files (list): list of paths to the parameter files.
-            log_files (list): list of paths to the log files.
-            **kwargs: Additional keyword arguments for scoring.
+    Args:
+        simulation_names: List of simulation file paths
+        param_template: Template for parameter files (comma-separated)
 
-        Returns:
-            pd.DataFrame: Dataframe with calculated parameters and score for all simulations.
+    Returns:
+        Tuple of (parameter_files, log_files)
+    """
+    parameter_files = []
+    log_files = []
+    template_parts = param_template.split(",")
+
+    for sim_path in simulation_names:
+        root_dir = Path(sim_path).parent.parent
+        sim_name = Path(sim_path).name.split(".")[0]
+
+        # Determine run directory
+        run_specific = root_dir / f"run_{sim_name}"
+        run_dir = run_specific if run_specific.exists() else root_dir / "run"
+
+        # Build parameter file paths
+        param_paths = [str(run_dir / f"{sim_name}{part}") for part in template_parts]
+        parameter_files.append(param_paths)
+
+        # Build log file path
+        log_files.append(str(run_dir / f"{sim_name}.out"))
+
+    return parameter_files, log_files
+
+def _extract_reference_row(df: pd.DataFrame) -> tuple[pd.Series | None, pd.DataFrame]:
+    """Extract reference simulation row from dataframe.
+
+    Args:
+        df: DataFrame with simulation results
+
+    Returns:
+        Tuple of (reference_row, dataframe_without_reference)
+    """
+    for index_str in df.index:
+        if REFERENCE_SIM_NAME in index_str:
+            reference_row = df.loc[index_str].copy()
+            reference_row.name = REFERENCE_SIM_NAME
+            df_clean = df.drop(index=index_str)
+            return reference_row, df_clean
+
+    return None, df.copy()
+
+def _compute_penalty(optimizer: Optimizer, target_values: np.ndarray,
+                    multiplier: float) -> float:
+    """Compute penalty value for failed simulations.
+
+    Args:
+        optimizer: Optimizer instance
+        target_values: Array of target values (may contain NaN)
+        multiplier: Penalty multiplier
+
+    Returns:
+        Penalty value
+    """
+    # Try to use optimizer history for penalty
+    try:
+        error_values = optimizer.get_result().func_vals
+        n_initial = optimizer.get_result().specs['args']['n_initial_points']
+        if len(error_values) >= n_initial:
+            return multiplier * np.mean(error_values)
+    except:
+        pass
+
+    # Fallback to mean of current values
+    return multiplier * np.nanmean(target_values)
+
+def _handle_failed_simulations_with_penalty(df: pd.DataFrame, optimizer: Optimizer,
+                                           multiplier: float = DEFAULT_PENALTY_MULTIPLIER
+                                           ) -> tuple[list[float], list[list[float]]]:
+    """Handle failed simulations by assigning penalty scores.
+
+    Args:
+        df: DataFrame with scores
+        optimizer: Optimizer instance
+        multiplier: Penalty multiplier
+
+    Returns:
+        Tuple of (corrected_scores, parameters)
     """
 
+    target_values = df[SCORE_COLUMN].values.copy()
+    target_values[target_values == FAILED_SIMULATION_SCORE] = np.nan
+
+    penalty = _compute_penalty(optimizer, target_values, multiplier)
+    logging.info(f"Using penalty of {penalty:.4f} for failed simulations")
+
+    corrected_scores = np.where(np.isnan(target_values), penalty, target_values)
+
+    # Extract parameters for all simulations
+    param_columns = [col for col in df.columns if col != SCORE_COLUMN]
+    parameters = df[param_columns].values.tolist()
+
+    return corrected_scores.tolist(), parameters
+
+def _handle_failed_simulations_by_removal(df: pd.DataFrame) -> tuple[list[float],
+                                                                     list[list[float]],
+                                                                     pd.DataFrame]:
+    """Handle failed simulations by removing them.
+
+    Args:
+        df: DataFrame with scores
+        target: Target name
+
+    Returns:
+        Tuple of (scores, parameters, filtered_dataframe)
+    """
+    target_values = df[SCORE_COLUMN].values
+    failed_mask = target_values == FAILED_SIMULATION_SCORE
+
+    n_failed = np.sum(failed_mask)
+    if n_failed > 0:
+        logging.info(f"Removed {n_failed} failed simulation(s)")
+
+    # Keep only successful simulations
+    successful_mask = failed_mask == False
+    if not np.any(successful_mask):
+        raise ValueError("All simulations failed - cannot update optimizer")
+
+    df_success = df[successful_mask].copy()
+    scores = df_success[SCORE_COLUMN].values.tolist()
+
+    param_columns = [col for col in df_success.columns if col != SCORE_COLUMN]
+    parameters = df_success[param_columns].values.tolist()
+
+    logging.info(f"Using {len(scores)} successful simulation(s)")
+    return scores, parameters, df_success
+
+def _simplify_indices(df: pd.DataFrame) -> pd.DataFrame:
+    """Simplify dataframe indices to just simulation names.
+
+    Args:
+        df: DataFrame with path-based indices
+
+    Returns:
+        DataFrame with simplified indices
+    """
+    df_copy = df.copy()
+    simple_indices = [idx.split("/")[-1].split(".")[0] for idx in df.index]
+    df_copy.index = simple_indices
+    return df_copy
+
+def compute_and_tell_optimizer(optimizer: Optimizer, target: str,
+                               parameter_list: list[str] | str,
+                               simulation_dict: dict[str, xr.Dataset],
+                               validation_data_path: str,
+                               parameter_file_template: str,
+                               **kwargs) -> tuple[pd.DataFrame, Optimizer]:
+    """Compute scores and update the optimizer.
+
+    Args:
+        optimizer: Optimizer instance
+        target: Target type (e.g., "temp_salt", "Pad")
+        parameter_list: List of parameter names (or single string)
+        simulation_dict: Dictionary mapping simulation paths to xarray Datasets
+        validation_data_path: Path to validation data
+        parameter_file_template: Template for parameter files (comma-separated)
+        **kwargs: Additional arguments (use_penalty, variable_names, etc.)
+
+    Returns:
+        Tuple of (results_dataframe, updated_optimizer)
+    """
+    # Normalize parameter_list to list
+    if isinstance(parameter_list, str):
+        parameter_list = [parameter_list]
+
+    use_penalty = kwargs.get('use_penalty', False)
+    simulation_names = list(simulation_dict.keys())
+
+    # Build file paths
+    parameter_files, log_files = _build_file_paths(simulation_names, parameter_file_template)
+
+    # Compute scores
     scoring_target = TargetRegistry.create(target, name=target)
-    return scoring_target.score(
+    results_df = scoring_target.score(
         parameter_list=parameter_list,
-        model_xr=model_xr,
-        sims=sims,
+        model_xr=simulation_dict,
+        sims=simulation_names,
         validation_data_path=validation_data_path,
         parameter_files=parameter_files,
         log_files=log_files,
         **kwargs
     )
 
+    # Extract reference row (if exists)
+    reference_row, results_df_clean = _extract_reference_row(results_df)
 
-def correct_failed_simulations(optimizer: Optimizer, df: pd.DataFrame,
-                               target: str, standard_penalty: float = 2.0) -> list[float]:
-    """
-    Correct the target values in the dataframe for failed simulations.
-    If a simulation failed, it is assigned a penalty value.
-
-    Parameters:
-    optimizer (Optimizer): Optimizer instance.
-    df (pd.DataFrame): Dataframe containing the target values.
-    target (str): Target type.
-    standard_penalty (float): Standard penalty value for failed simulations (Default is 4.0)
-    Returns:
-    list: List of corrected target values.
-    """
-
-    # Get penalty for failed simulations
-    target_values = df[f"mae_{target.lower()}"].values
-    target_values[target_values == 1e6] = np.nan
-    penalty = standard_penalty*np.nanmean(target_values)
-
-    try:
-        error_values = optimizer.get_result().func_vals
-        if len(error_values) >= optimizer.get_result().specs['args']['n_initial_points']:
-            penalty = standard_penalty*np.mean(error_values)
-    except:
-        penalty = standard_penalty*np.nanmean(target_values)
-
-    # Add a soft-penalty for failed simulations
-    print(f"Using a penalty of {penalty} for failed simulations.")
-    corrected_target = np.where(np.isnan(target_values), penalty, target_values)
-
-    return corrected_target.tolist()
-
-
-def compute_and_tell_optimizer(optimizer: Optimizer, target: str,
-                               parameter_list: list[str],
-                               simulation_dict: dict[str, xr.Dataset],
-                               validation_data_path: str,
-                               parameter_file_template: str,
-                               **kwargs: float) -> tuple[pd.DataFrame, list]:
-    """
-    Compute the mean absolute error (MAE) and update the optimizer.
-
-    Parameters:
-    optimizer (Optimizer): Optimizer instance.
-    target (str): target type ("Pad" or "Thd").
-    parameter_list (list): List of parameters to calculate.
-    simulation_dict (dict): Dictionary of simulation datasets.
-    validation_data_path (str): Path to the validation data.
-    parameter_file_template (str): Template for the parameter file name.
-    target_amoc (float): Target AMOC value (optional).
-
-    Returns:
-    tuple: Dataframe with calculated parameters and score for all simulations and updated optimizer.
-    """
-
-    use_penalty = kwargs.get('use_penalty', False)
-
-    if not isinstance(parameter_list, list):
-        parameter_list = [parameter_list]
-
-    simulation_names = list(simulation_dict.keys())
-    # construct the parameter file name
-    # should be in the run directory of the simulation
-
-    parameter_files = []
-    log_files = []
-
-    for sim in simulation_names:
-        root_dir = Path(sim).parent.parent
-        name_sim = Path(sim).name.split(".")[0]
-        # paramter_file_template may contain multiple parts separated by ,
-        list_parameter_file_template = parameter_file_template.split(",")
-        # create multiple name_param for each item in list_parameter_file_template
-        # check if runs are in run_{name_sim} or run
-        if os.path.exists(f"{root_dir}/run_{name_sim}/"):
-            # parameter_files.append(f"{root_dir}/run_{name_sim}/{name_param}")
-            current_param_list = [f"{root_dir}/run_{name_sim}/{name_sim}{part}" for part in list_parameter_file_template]
-            parameter_files.append(current_param_list)
-            log_files.append(f"{root_dir}/run_{name_sim}/{name_sim}.out")
-        else:
-            # parameter_files.append(f"{root_dir}/run/{name_param}")
-            current_param_list = [f"{root_dir}/run/{name_sim}{part}" for part in list_parameter_file_template]
-            parameter_files.append(current_param_list)
-            log_files.append(f"{root_dir}/run/{name_sim}.out")
-
-    test_df = calculate_score_df(target, parameter_list, simulation_dict, simulation_names,
-                                 validation_data_path, parameter_files, log_files, **kwargs)
-
-    # Remove reference in test_df if it exists
-    test_df_clean = test_df.copy()
-    for index_str in test_df.index:
-        if "Reference" in index_str:
-            test_df_clean = test_df.drop(index=index_str)
-            break
-
+    # Handle failed simulations
     if use_penalty:
-        # Add penalty to failed simulations
-        corrected_mae = correct_failed_simulations(optimizer, test_df_clean, target)
-        tested_parameters = test_df_clean[parameter_list].values.tolist()
-
+        scores, parameters = _handle_failed_simulations_with_penalty(results_df_clean, optimizer)
+        final_df = results_df_clean.copy()
     else:
-        # Simply remove failed simulations
-        target_values = test_df_clean[f"mae_{target.lower()}"].values
-        failed_mask = target_values == 1e6
-        successful_indices =  failed_mask == False
-        if np.any(successful_indices):
-            test_df_clean = test_df_clean[successful_indices]
-            tested_parameters = test_df_clean[parameter_list].values.tolist()
-            corrected_mae = test_df_clean[f"mae_{target.lower()}"].values.tolist()
-            logging.info(f"Removed {np.sum(failed_mask)} failed simulations")
-            logging.info(f"Using {len(corrected_mae)} successful simulations")
-        else:
-            logging.warning("All simulations failed! Cannot update optimizer.")
-            return test_df_clean, optimizer
+        scores, parameters, final_df = _handle_failed_simulations_by_removal(results_df_clean)
 
-    # Add penalty to failed simulations
-    optimizer.tell(tested_parameters, corrected_mae)
-    logging.info("Told new parameters to optimizer")
+    # Update optimizer
+    optimizer.tell(parameters, scores)
+    logging.info("Updated optimizer with new parameters")
 
-    # Correct indeces to match only simulation names
-    corrected_index = []
-    for index in test_df_clean.index:
-        corrected_index.append(index.split("/")[-1].split(".")[0])
+    # Prepare final dataframe
+    final_df = _simplify_indices(final_df)
+    final_df[SCORE_COLUMN] = scores
 
-    test_df_clean.index = corrected_index
-    test_df_clean[f"mae_{target.lower()}"] = corrected_mae
-    # add Reference row at the top if it was removed and write the index as Reference
-    for index_str in test_df.index:
-        if "Reference" in index_str:
-            reference_row = test_df.loc[index_str]
-            reference_row.name = "Reference"
-            test_df_clean = pd.concat([pd.DataFrame([reference_row]), test_df_clean])
-            break
+    # Re-add reference row if it existed
+    if reference_row is not None:
+        final_df = pd.concat([pd.DataFrame([reference_row]), final_df])
 
-    return test_df_clean, optimizer
+    return final_df, optimizer
 
 def check_optimization_status(optimizer: Optimizer, iteration: int,
                               max_iteration: int = 10) -> bool:
+    """Check if optimization should stop.
 
-    optimization_done = False
-    # Check if the maximum number of iterations has been reached
+    Args:
+        optimizer: Optimizer instance
+        iteration: Current iteration number
+        max_iteration: Maximum allowed iterations
+
+    Returns:
+        True if optimization is done, False otherwise
+    """
     if iteration > max_iteration:
-        logging.info("Maximum number of iterations reached for the Bayesian optimization")
-        optimization_done = True
+        logging.info("Maximum iterations reached")
+        return True
 
-    # Check if the optimizer has improved in the last max_stable_iterations
     if optimizer.stable_iterations >= optimizer.max_stable_iterations:
-        logging.info("Maximum number of stable iterations reached, stopping the optimization")
-        optimization_done = True
+        logging.info("Maximum stable iterations reached")
+        return True
 
-    return optimization_done
+    return False
