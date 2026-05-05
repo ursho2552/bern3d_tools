@@ -1,0 +1,131 @@
+# Example of configuration file tuning NPZD paremeters with the targets of
+# DIC, Alk, Po4, SiO, Opal, CaCO3 and POC export, and NPP.
+
+config_file_path: "/storage/homefs/uh24x373/bgc_bern/bern3d_tools/bayesian_optimization/config_files/config_npzd.yaml"
+
+# Provide the paths where this scripts can be found. They should all be in the directory of this module
+bern3d_script: "/storage/homefs/uh24x373/bgc_bern/bern3d_tools/shared/runscripts/run_bern3d_f90_omp_8cores.sh"
+postprocessing_script: "/storage/homefs/uh24x373/bgc_bern/bern3d_tools/bayesian_optimization/runscripts/run_postprocessing.sh"
+optimizer_script: "/storage/homefs/uh24x373/bgc_bern/bern3d_tools/bayesian_optimization/runscripts/run_optimizer.sh"
+python_scripts: "/storage/homefs/uh24x373/bgc_bern/bern3d_tools/bayesian_optimization/"
+
+# Define some expected times for the model to run, and for the python scripts (usually a few minutes)
+bern3d_script_time: "06:00:00"
+postprocessing_script_time: "00:15:00"
+optimizer_script_time: "00:10:00"
+
+# Name of the simulation and where the output type and timescale to use (usally only full and ave)
+simulation_name_bern3d: "NPZD"
+output_type_bern3d: "full"
+output_timescale_bern3d: "ave"
+# You may also restart from past simulations using the wildcard simulation argument
+# by entering the shared name of the simulations e.g. past_simulations* or None, which will be
+# converted into *. The past simulation should be in output_files_restart and the simulation name
+# of restarts should be in simulation_name_restart
+wildcard_simulation: !!python/none
+
+# The path to the work directory (best to use scratch)
+work_directory: "/storage/scratch/users/uh24x373/Optimization_NPZD/"
+# keep as None if the output should be in the workdirectory
+output_files_bern3d: !!python/none
+output_dir_optimizer: !!python/none
+
+# Path to initialization in case of simulation initialization. In case of None, use !!python/none
+simulation_name_restart: !!python/none
+output_files_restart: !!python/none
+
+# For Bern3d-v3, the flag has to be set to False
+bern3d_f90: True
+bern3d_executable_name: "RUNNAME"
+bern3d_template: "/storage/scratch/users/uh24x373/bern3d_f90/run/"
+
+# Path to the validation dataset
+validation_data_path: "/storage/scratch/users/uh24x373/bern3d_f90/run/"
+
+# The number of iterations to run the Bayesian optimization algorithm
+use_reference_simulation: True
+max_iterations: 100
+max_stable_iterations: 15
+
+# Targets for POC, CaCO3 and NPP in Pg C yr-1
+# Targets for Opal in Tg Si yr-1
+# Targets for amoc in °C
+target_values:
+ target_amoc: !!python/none
+ target_poc: 9.76
+ target_caco3: 1.87
+ target_opal: 190.73
+ target_npp: 60.0
+
+# Path to file with parameters to be optimized
+bern3d_parameter_file: ".npzd.parameter"
+bern3d_restart_files: "/storage/scratch/users/uh24x373/bern3d_f90/results/Spinup2*"
+
+parameter_bounds:
+  a_growth_diaz: !!python/tuple [0.3,1.7]
+  a_growth_cocc: !!python/tuple [0.3,1.7]
+  a_growth_diat: !!python/tuple [0.5,3.0]
+  a_growth_other: !!python/tuple [0.3,1.7]
+  graze_max: !!python/tuple [0.1,1.1]
+  mort_zoo: !!python/tuple [0.0,0.2]
+  pref_diaz: !!python/tuple [0.1,2.0]
+  pref_cocc: !!python/tuple [0.1,2.0]
+  pref_diat: !!python/tuple [0.1,2.0]
+  pref_other: !!python/tuple [0.1,2.0]
+  pref_det: !!python/tuple [0.1,2.0]
+  pref_self: !!python/tuple [0.1,2.0]
+
+fixed_values: {}
+
+use_penalty: False
+
+initialization_type: "random"
+tuning_target: "dic_alk_po4_sio_npp_poc_caco3_opal"
+n_initialization: 10
+surrogate_type: "RF"
+acquisition_type: "gp_hedge"
+batchsize: 30
+acquisitition_optimizer: "auto"
+job_number: -1
+
+# Standard Bern3D setup for optimization
+variable_names:
+  dic:
+    sim: "DIC"
+    obs: "dic"
+  alk:
+    sim: "ALK"
+    obs: "alk"
+  po4:
+    sim: "PO4"
+    obs: "po4"
+  sio:
+    sim: "SiO"
+    obs: "sio"
+  no3:
+    sim: "NO3"
+    obs: "no3"
+  temp:
+    sim: "TEMP"
+    obs: "temp"
+  salt:
+    sim: "S"
+    obs: "salt"
+  ida:
+    sim: "IdealAge"
+    obs: "ida"
+  amoc:
+    sim: "OPSIA_max"
+    obs: !!python/none
+  npp:
+    sim: "NPZD_NPP"
+    obs: !!python/none
+  poc:
+    sim: "EXPORT_POM"
+    obs: !!python/none
+  caco3:
+    sim: "EXPORT_CACO3"
+    obs: !!python/none
+  opal:
+    sim: "Export_OPAL"
+    obs: !!python/none
