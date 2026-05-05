@@ -14,7 +14,6 @@ import re
 from pathlib import Path
 from typing import Optional, Union, Type, TypeVar
 
-
 Config = TypeVar('Config')
 
 def get_user_email() -> str:
