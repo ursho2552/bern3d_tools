@@ -6,8 +6,10 @@ import pickle
 import logging
 
 import pandas as pd
-import bayesian_optimization as bo
 import bern3d_tools.shared.utils as shared_utils
+
+from . import optimizer
+from .utils import ConfigParameters, check_configuration, access_file
 
 class PostprocessingRunner:
     """Orchestrates postprocessing after Bern3D simulations complete.
@@ -29,8 +31,8 @@ class PostprocessingRunner:
             configuration_file: Path to configuration YAML file
             simulation_names: Comma-separated list of simulation names
         """
-        self.config = shared_utils.read_config_file(configuration_file, bo.ConfigParameters)
-        self.config = bo.check_configuration(self.config)
+        self.config = shared_utils.read_config_file(configuration_file, ConfigParameters)
+        self.config = check_configuration(self.config)
         self.simulation_names = simulation_names.split(",")
         self.optimizer = None
         self.first_iteration = False
@@ -85,7 +87,7 @@ class PostprocessingRunner:
             DataFrame with simulation results and scores
         """
         # Load simulation outputs
-        simulation_dict = bo.access_file(
+        simulation_dict = access_file(
             model_output_files=self.config.output_files_bern3d,
             simulation_name=self.simulation_names,
             output_type=self.config.output_type_bern3d,
@@ -101,7 +103,7 @@ class PostprocessingRunner:
         }
 
         # Compute scores and update optimizer
-        new_df, self.optimizer = bo.compute_and_tell_optimizer(
+        new_df, self.optimizer = optimizer.compute_and_tell_optimizer(
             optimizer=self.optimizer,
             target=self.config.tuning_target,
             parameter_list=parameter_list,

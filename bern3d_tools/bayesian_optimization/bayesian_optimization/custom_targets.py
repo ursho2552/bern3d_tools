@@ -14,9 +14,9 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-from bayesian_optimization.scoring.base import ScoringTarget
-from bayesian_optimization.scoring.targets import TargetRegistry
-from bayesian_optimization.scoring.utils import (
+from .scoring.base import ScoringTarget
+from .scoring.targets import TargetRegistry
+from .scoring.utils import (
     simulation_finished,
     nrmse,
     get_config_value

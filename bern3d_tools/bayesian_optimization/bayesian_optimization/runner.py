@@ -7,8 +7,10 @@ import logging
 import pickle
 
 from skopt import Optimizer
-import bayesian_optimization as bo
 import bern3d_tools.shared.utils as shared_utils
+
+from . import optimizer
+from .utils import ConfigParameters, check_configuration, access_file
 
 
 class BayesianOptimizationRunner:
@@ -42,8 +44,8 @@ class BayesianOptimizationRunner:
             current_iteration: Current iteration number (0 for initialization)
             email: Email address for job notifications
         """
-        self.config = shared_utils.read_config_file(configuration_file, bo.ConfigParameters)
-        self.config = bo.check_configuration(self.config)
+        self.config = shared_utils.read_config_file(configuration_file, ConfigParameters)
+        self.config = check_configuration(self.config)
         self.current_iteration = current_iteration
         self.email = email
         self.optimizer = None
@@ -116,7 +118,7 @@ class BayesianOptimizationRunner:
         Returns:
             DataFrame with scored simulations
         """
-        simulation_dict = bo.access_file(
+        simulation_dict = access_file(
             model_output_files=self.config.output_files_restart,
             simulation_name=self.config.simulation_name_restart,
             output_type=self.config.output_type_bern3d,
@@ -134,7 +136,7 @@ class BayesianOptimizationRunner:
             **self.config.target_values
         }
 
-        initial_df, self.optimizer = bo.compute_and_tell_optimizer(
+        initial_df, self.optimizer = optimizer.compute_and_tell_optimizer(
             optimizer=self.optimizer,
             target=self.config.tuning_target,
             parameter_list=parameter_list,

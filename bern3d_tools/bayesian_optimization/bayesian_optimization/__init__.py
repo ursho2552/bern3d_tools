@@ -2,29 +2,29 @@
 """Bayesian optimization module for Bern3D parameter tuning."""
 
 # Import specific items from each module
-from bayesian_optimization.runner import BayesianOptimizationRunner
-from bayesian_optimization.postprocessing_runner import PostprocessingRunner
-from bayesian_optimization.optimizer import (
+from .runner import BayesianOptimizationRunner
+from .postprocessing_runner import PostprocessingRunner
+from .optimizer import (
     compute_and_tell_optimizer,
     check_optimization_status,
     REFERENCE_SIM_NAME,
 )
-from bayesian_optimization import custom_targets
-from bayesian_optimization.utils import (
+from . import custom_targets
+from .utils import (
     access_file,
     check_configuration,
     ConfigParameters,
     # Add other public functions/classes from utils here
 )
-from bayesian_optimization.scoring.utils import (
+from .scoring.utils import (
     simulation_finished,
     nrmse,
     get_field_stability,
     get_config_value
 )
-from bayesian_optimization.scoring.base import ScoringTarget
-from bayesian_optimization.scoring.protocols import ScoringTargetProtocol
-from bayesian_optimization.scoring.targets import TargetRegistry
+from .scoring.base import ScoringTarget
+from .scoring.protocols import ScoringTargetProtocol
+from .scoring.targets import TargetRegistry
 
 # Define what gets exported with "import bayesian_optimization as bo"
 __all__ = [

@@ -4,11 +4,7 @@
 This is the utils script for the sensitivity analysis module.
 """
 
-import sys
 import os
-repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir))
-if repo_root not in sys.path:
-    sys.path.append(repo_root)
 
 import glob
 from dataclasses import dataclass

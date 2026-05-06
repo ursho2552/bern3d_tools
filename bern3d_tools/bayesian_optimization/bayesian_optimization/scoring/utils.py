@@ -16,7 +16,7 @@ import xarray as xr
 def simulation_finished(log_path: str) -> bool:
     """ Returns True if 'SIMULATION COMPLETE' appears anywhere in the file.
 
-        Parameters:
+        Args:
             log_path (str): Path to the log file.
 
         Returns:
@@ -33,7 +33,7 @@ def nrmse(predictions: npt.ArrayLike, targets: npt.ArrayLike,
           weights: npt.ArrayLike | None = None) -> float:
     """ Calculate the Normalized Root Mean Square Error (NRMSE) between predictions and targets.
 
-        Parameters:
+        Args:
             predictions (np.array): Predicted values.
             targets (np.array): Target values.
 
@@ -55,7 +55,7 @@ def get_field_stability(ds: xr.Dataset, var_name: str, depth_level: Optional[int
                         min_stable_fraction: Optional[float] = 0.2) -> float:
     """ Calculate the stability level of a field in a dataset.
 
-        Parameters:
+        Args:
             ds (xr.Dataset): Input dataset containing the variable
             var_name (str): Name of the variable to analyze
             depth_level (int): Depth level index to select (default: 0)
@@ -122,7 +122,7 @@ def get_field_stability(ds: xr.Dataset, var_name: str, depth_level: Optional[int
 def get_config_value(path: str | list[str], param: str):
     """ Get the value of a parameter from a configuration file.
 
-        Parameters:
+        Args:
             path (str or list[str]): Path to the configuration file.
             param (str): Parameter name to retrieve.
 
@@ -169,7 +169,7 @@ def find_nearest(array: npt.ArrayLike, value: float,
                  retval: Optional[int] = 1) -> float | int | tuple[float, int]:
     """ Find the nearest value in an array to a given value.
 
-        Parameters:
+        Args:
             array (np.array): Array to search.
             value (float): Value to find the nearest to.
             retval (int): Determines the return value (0: nearest value, 1: index, 2: both).
