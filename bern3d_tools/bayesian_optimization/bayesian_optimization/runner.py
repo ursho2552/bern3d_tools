@@ -327,7 +327,7 @@ class BayesianOptimizationRunner:
         """
         if param_config['is_reference']:
             return {
-                'simulation_name': bo.optimizer.REFERENCE_SIM_NAME,
+                'simulation_name': optimizer.REFERENCE_SIM_NAME,
                 'template_dir': self.config.bern3d_template,
                 'executable_name': self.config.bern3d_executable_name,
                 'restart_files': self.config.bern3d_restart_files,
@@ -343,7 +343,7 @@ class BayesianOptimizationRunner:
             return {
                 'simulation_name': sim_name,
                 'template_dir': f"{self.config.work_directory}/run/",
-                'executable_name': bo.optimizer.REFERENCE_SIM_NAME,
+                'executable_name': optimizer.REFERENCE_SIM_NAME,
                 'restart_files': None,
                 'fixed_values': (list(self.config.fixed_values.values())
                                if self.config.fixed_values else []),
@@ -466,7 +466,7 @@ class BayesianOptimizationRunner:
         Returns:
             True if optimization should stop
         """
-        return bo.check_optimization_status(
+        return optimizer.check_optimization_status(
             self.optimizer,
             self.current_iteration + 1,
             self.config.max_iterations
