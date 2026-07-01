@@ -79,7 +79,7 @@ def analyze_sensitivity_results(config: ConfigFile,
                     continue
 
                 # construct the name from sample_items with a comma-separated list of parameters if more than one
-                parameter_name = ", ".join(sample_items["parameters"]) if len(sample_items["parameters"]) > 1 else sample_items["parameters"][0]
+                parameter_name = ",".join(sample_items["parameters"]) if len(sample_items["parameters"]) > 1 else sample_items["parameters"][0]
 
                 file_path = results_dir / f"{run_name}{filename_suffix}"
 
@@ -164,8 +164,9 @@ def calculate_sensitivity_metrics(var_data: xr.DataArray, ref_data: xr.DataArray
     dimension_info = f"{dims}D: {list(var_data.dims)}"
 
     # check if variable has a p surrounded by numbers, if so replace with . for better readability
-    if "p" in variation and any(char.isdigit() for char in variation):
-        variation = variation.replace("p", ".")
+    if "param" not in variation:
+        if "p" in variation and any(char.isdigit() for char in variation):
+            variation = variation.replace("p", ".")
 
     return {
         'parameter': parameter,
