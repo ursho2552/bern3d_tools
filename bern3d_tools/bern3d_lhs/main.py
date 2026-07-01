@@ -7,7 +7,6 @@ This is the main script for the sensitivity analysis module.
 import argparse
 import latin_hypercube_sampling as lhs
 import bern3d_tools.shared.utils as shared_utils
-import matplotlib.pyplot as plt
 
 def main(configuration_file: str, email: str) -> None:
     """

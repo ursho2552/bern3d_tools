@@ -13,13 +13,13 @@ from typing import TypeVar
 ConfigFile = TypeVar('ConfigFile')
 
 def analyze_sensitivity_results(config: ConfigFile,
-                                parameter_list: list[str]) -> pd.DataFrame:
+                                parameter_dict: dict[str, str | dict[str: float]]) -> pd.DataFrame:
     """
     Analyze sensitivity results by comparing model outputs to reference run.
 
     Parameters:
     config (ConfigParameters): Configuration parameters
-    parameter_list (List[str]): List of parameters that were varied
+    parameter_dict (dict): dictionary of parameters and their change factors
 
     Returns:
     pd.DataFrame: Summary of sensitivity analysis results
@@ -47,26 +47,39 @@ def analyze_sensitivity_results(config: ConfigFile,
             raise FileNotFoundError(f"Reference file {ref_file} not found")
 
     # Analyze each parameter variation
-    parameter_factor_dict = config.parameter_list
-
-    for parameter in parameter_list:
-        if parameter is None:  # Skip the None entry used for reference
+    for key, item in parameter_dict.items():
+        if key == "Reference":
             continue
 
-        if isinstance(parameter_factor_dict[parameter], list):
-            change_factors = parameter_factor_dict[parameter]
-            names = [f"{str(factor).replace('.','p')}" for factor in change_factors]
+        elif isinstance(item, float) or isinstance(item, int):
+            sample = {f"Low_{key}": {"parameters": [key]},
+                      f"High_{key}": {"parameters": [key]}
+                      }
 
-        else:
-            names = ["Low", "High"]
+        elif isinstance(item, list):
+            sample = {f"{str(value).replace('.','p')}_{key}": {"parameters": [key]}
+                        for value in item}
 
-        for variation in names:
-            run_name = f"{variation}_{parameter}"
 
+        elif isinstance(item, dict):
+            sample = {}
+            for i in range(len(next(iter(item.values())))):
+                name = f"Multiparam_{key}_{i}"
+                sample[name] = {"parameters": list(item.keys())}
+
+        elif item is None:
+            sample = {f"Low_{key}": {"parameters": [key]},
+                      f"High_{key}": {"parameters": [key]}
+                      }
+
+        for run_name, sample_items in sample.items():
             # Analyze each target field
             for variable, filename_suffix in config.target_field.items():
                 if variable not in reference_data:
                     continue
+
+                # construct the name from sample_items with a comma-separated list of parameters if more than one
+                parameter_name = ",".join(sample_items["parameters"]) if len(sample_items["parameters"]) > 1 else sample_items["parameters"][0]
 
                 file_path = results_dir / f"{run_name}{filename_suffix}"
 
@@ -74,8 +87,8 @@ def analyze_sensitivity_results(config: ConfigFile,
                     logging.error(f"Model run failed - file not found: {file_path}")
                     # Add a failure record to track missing runs
                     results.append({
-                        'parameter': parameter,
-                        'variation': variation,
+                        'parameter': parameter_name,
+                        'variation': run_name,
                         'variable': variable,
                         'dimensions': None,
                         'reference_mean': np.nan,
@@ -101,7 +114,7 @@ def analyze_sensitivity_results(config: ConfigFile,
 
                         # Calculate sensitivity metrics
                         sensitivity_metrics = calculate_sensitivity_metrics(
-                            var_data, ref_data, parameter, variation, variable
+                            var_data, ref_data, parameter_name, run_name, variable
                         )
 
                         results.append(sensitivity_metrics)
@@ -151,8 +164,9 @@ def calculate_sensitivity_metrics(var_data: xr.DataArray, ref_data: xr.DataArray
     dimension_info = f"{dims}D: {list(var_data.dims)}"
 
     # check if variable has a p surrounded by numbers, if so replace with . for better readability
-    if "p" in variation and any(char.isdigit() for char in variation):
-        variation = variation.replace("p", ".")
+    if "param" not in variation:
+        if "p" in variation and any(char.isdigit() for char in variation):
+            variation = variation.replace("p", ".")
 
     return {
         'parameter': parameter,

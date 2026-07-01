@@ -24,70 +24,84 @@ def main(configuration_file: str, email: str, analyze_runs: bool = False) -> Non
     my_config = shared_utils.read_config_file(configuration_file, sa.ConfigParameters)
     my_config = sa.check_configuration(my_config)
 
-    parameter_list = list(my_config.parameter_list.keys())
-    parameter_list.insert(0, None)
     parameter_factor_dict = my_config.parameter_list
+    parameter_factor_dict['Reference'] = 1.0
 
     if not analyze_runs:
         # For each parameter create a new parameter file and executable
         model_jobs = []
-        for parameter in parameter_list:
+        for key, item in parameter_factor_dict.items():
 
-            if parameter in parameter_factor_dict:
+            if key == "Reference":
+                sample = {"Reference": {"values": [None],
+                                        "factors": [1.0],
+                                        "parameters": [None],}
+                }
 
-                if isinstance(parameter_factor_dict[parameter], list):
-                    change_factors = parameter_factor_dict[parameter]
-                    iterations = len(change_factors)
-                    names = [f"{str(factor).replace('.','p')}" for factor in change_factors]
-                    factors = [None] * iterations
-                    values = change_factors
-                else:
-                    change_factor = parameter_factor_dict[parameter] if parameter_factor_dict[parameter] is not None else my_config.relative_change
-                    iterations = 2
-                    names = ["Low", "High"]
-                    factors = [1 - change_factor, 1 + change_factor]
-                    values = [None, None]
-            else:
-                change_factor = 0.0
-                iterations = 1
-                names = ["Reference"]
-                factors = [1.0]
-                values = [None]
 
-            for name, factor, value in zip(names, factors, values):
-                # Define the new name for the executable
+            elif isinstance(item, float) or isinstance(item, int):
+                sample = {f"Low_{key}": {"values": [None],
+                                              "factors": [1 - item],
+                                              "parameters": [key]},
+                          f"High_{key}": {"values": [None],
+                                               "factors": [1 + item],
+                                               "parameters": [key]}
+                          }
 
-                new_name = f"{name}_{parameter}"
-                if parameter is None:
-                    new_name = "Reference"
+            elif isinstance(item, list):
+                sample = {f"{str(value).replace('.','p')}_{key}": {"values": [value],
+                                                                          "factors": [None],
+                                                                          "parameters": [key]}
+                          for value in item}
 
-                # Copy the template executable and parameter file
+
+            elif isinstance(item, dict):
+                sample = {}
+                for i in range(len(next(iter(item.values())))):
+                    name = f"Multiparam_{key}_{i}"
+                    values = [item[param][i] for param in item.keys()]
+                    sample[name] = {"values": values,
+                                    "factors": [None] * len(values),
+                                    "parameters": list(item.keys())}
+
+            elif item is None:
+                sample = {f"Low_{key}": {"values": [None],
+                                              "factors": [1 - my_config.relative_change],
+                                              "parameters": [key]},
+                          f"High_{key}": {"values": [None],
+                                               "factors": [1 + my_config.relative_change],
+                                               "parameters": [key]}
+                          }
+
+            # Copy the template executable and parameter file
+            for new_name, sample_items in sample.items():
+                factors = sample_items["factors"]
+                values = sample_items["values"]
+                parameters = sample_items["parameters"]
+
                 run_directory = shared_utils.setup_run_directory(template_dir=my_config.bern3d_template,
-                                                executable_name=my_config.bern3d_executable_name,
-                                                new_name=new_name,
-                                                work_dir=my_config.work_directory,
-                                                restart_files=my_config.bern3d_restart_files)
+                                                    executable_name=my_config.bern3d_executable_name,
+                                                    new_name=new_name,
+                                                    work_dir=my_config.work_directory,
+                                                    restart_files=my_config.bern3d_restart_files)
 
-                if parameter is not None:
-                    # Update the parameter file with the new parameter value
-                    # get current parameter values
-                    list_parameter_files = my_config.bern3d_parameter_file.split(",")
-                    for param_file_template in list_parameter_files:
+                list_parameter_files = my_config.bern3d_parameter_file.split(",")
+                for param_file_template in list_parameter_files:
 
-                        full_path = f"{run_directory}/{new_name}{param_file_template}"
-                        parameter_dict_old, preserved_lines = shared_utils.parse_to_dict(file_path=full_path)
+                    full_path = f"{run_directory}/{new_name}{param_file_template}"
+                    parameter_dict, preserved_lines = shared_utils.parse_to_dict(file_path=full_path)
 
-                        # Adapt value
-                        parameter_dict = shared_utils.adapt_dictionary(config_dict=parameter_dict_old,
-                                                        parameter=parameter,
+                    # Adapt values
+                    for param, value, factor in zip(parameters, values, factors):
+                        parameter_dict = shared_utils.adapt_dictionary(config_dict=parameter_dict,
+                                                        parameter=param,
                                                         factor=factor,
                                                         new_value=value)
 
-                        # Create new parameter file
-                        _ = shared_utils.create_new_parameter_file(config_dict=parameter_dict,
-                                                                parameter_file_name=full_path,
-                                                                preserved_lines=preserved_lines)
-
+                    # Create new parameter file
+                    _ = shared_utils.create_new_parameter_file(config_dict=parameter_dict,
+                                                            parameter_file_name=full_path,
+                                                            preserved_lines=preserved_lines)
 
                 # Submit the job
                 model_job_id = shared_utils.submit_job(script_template=my_config.bern3d_run_script,
@@ -114,7 +128,7 @@ def main(configuration_file: str, email: str, analyze_runs: bool = False) -> Non
     else:
         # Analyze results
         logging.info("Analyzing runs...")
-        results_df = sa.analyze_sensitivity_results(my_config, parameter_list)
+        results_df = sa.analyze_sensitivity_results(my_config, parameter_factor_dict)
 
         # Save results
         sa.save_sensitivity_summary(results_df, my_config.work_directory)
