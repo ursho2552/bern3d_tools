@@ -1,5 +1,6 @@
 # Log files
 *.out
+.pylintrc
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

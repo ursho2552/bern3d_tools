@@ -8,7 +8,11 @@ bern3d_parameter_file: ".bgc.parameter"
 bern3d_restart_files: "/storage/scratch/users/uh24x373/Particle_flux/results/Spinup2*"
 # List of parameters to change
 parameter_list:
+  r_sm: [0.001, 0.004]
+  r_lg: [0.01, 0.04]
   k_POC: [1.5e-6, 4.0e-6]
+  # in reference is set to 0.0120087 so we should test a range around that value
+  K_O2: [0.006, 0.02]
   SinkVel_scale: [0.5, 1.5]
   phi_lg: [0.85, 0.98]
   aE: [0.05, 0.25]
@@ -17,11 +21,11 @@ parameter_list:
   alphadenit: [-0.8, -0.01]
   Tref: [10.0, 20.0]
 
-num_concurrent_jobs: 20
-num_samples: 120
+num_concurrent_jobs: 10
+num_samples: 200
 
 # Work directory
-work_directory: "/storage/scratch/users/uh24x373/lhs_particle_flux/"
+work_directory: "/storage/scratch/users/uh24x373/lhs_particle_flux_bm_main/"
 # Path to the sbatch script
 bern3d_run_script: "/storage/homefs/uh24x373/bgc_bern/bern3d_tools/shared/runscripts/run_bern3d_f90_mpi_4het.sh"
 main_script_path: "/storage/homefs/uh24x373/bgc_bern/bern3d_tools/bern3d_lhs/"
