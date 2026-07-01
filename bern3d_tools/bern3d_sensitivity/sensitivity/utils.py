@@ -82,4 +82,10 @@ def check_configuration(config: ConfigParameters) -> ConfigParameters:
         if missing_in_files == len(param_files):
             raise ValueError(f"Parameter '{parameter}' not found in the parameter file. Please check the parameter name and ensure it exists in the template parameter file.")
 
+    # check that if the parameter is a dictionary, all the items in the dictionary have the same length
+    for parameter, value in config.parameter_list.items():
+        if isinstance(value, dict):
+            lengths = [len(v) for v in value.values()]
+            if len(set(lengths)) != 1:
+                raise ValueError(f"All items in the dictionary for parameter '{parameter}' must have the same length. Found lengths: {lengths}")
     return config
