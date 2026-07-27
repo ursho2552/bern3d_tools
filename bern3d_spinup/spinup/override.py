@@ -8,7 +8,7 @@ default values (all boolean are set to False, all integers are set to 0, and all
 override_dictionary = {
     "phase_1": {
         'ndtyear': 144,
-        'runYears': 6000,
+        'runYears': 4000,
         'npstp_years': 10,
         'iwstp_years': 10,
         'itstp_years': 1,
@@ -20,6 +20,7 @@ override_dictionary = {
         'atmTSres': True
     },
     "phase_2": {
+        'runYears': 7000,
         'lin_nr': -1,
         'rundesc': "Spinup Phase 2",
         'atmTSres': False,
@@ -27,6 +28,7 @@ override_dictionary = {
         'atmConstInsol': True
     },
     "phase_3": {
+        'runYears': 10000,
         'rundesc': "Spinup Phase 3",
         'lin_name': "Spinup2.00001765",
         'diag_atmtemp_opt': True,
