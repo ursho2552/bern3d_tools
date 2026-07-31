@@ -1,20 +1,20 @@
 # Path to the script template
-bern3d_template: "/storage/homefs/uh24x373/bgc_bern/particle_flux/bern3d_f90/run"
+bern3d_template: "/storage/homefs/uh24x373/bgc_bern/Bern3D_documentation/bern3d_f90/run"
 # Should contain the name of the executable and the path to the executable
 bern3d_executable_name: "RUNNAME"
 bern3d_restart_files: !!python/none
 
 # Path to the work directory (should be in $SCRATCH)
-work_directory: "/storage/scratch/users/uh24x373/Particle_flux"
+work_directory: "/storage/scratch/users/uh24x373/Spinup_prepMergeMain"
 # Directory where the end results should be copied if specified and template python script
 result_directory: !!python/none
-python_submit_script: "../shared/runscripts/run_python_script.sh"
+python_submit_script: "/storage/homefs/uh24x373/bgc_bern/bern3d_tools/shared/runscripts/run_python_script.sh"
 
 # Path of the sbatch scripts (should be in the bern3d_tools)
 sbatch_script:
-  phase1: "../shared/runscripts/run_bern3d_f90_mpi_3het.sh"
-  phase2: "../shared/runscripts/run_bern3d_f90_mpi_3het.sh"
-  phase3: "../shared/runscripts/run_bern3d_f90_mpi_4het.sh"
+  phase1: "/storage/homefs/uh24x373/bgc_bern/bern3d_tools/shared/runscripts/run_bern3d_f90_mpi_3het.sh"
+  phase2: "/storage/homefs/uh24x373/bgc_bern/bern3d_tools/shared/runscripts/run_bern3d_f90_mpi_3het.sh"
+  phase3: "/storage/homefs/uh24x373/bgc_bern/bern3d_tools/shared/runscripts/run_bern3d_f90_mpi_4het.sh"
 
 # Time to run the script
 time: "24:00:00"
