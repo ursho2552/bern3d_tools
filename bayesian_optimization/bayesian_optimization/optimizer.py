@@ -489,16 +489,16 @@ def score_npzd(target: str, parameter_list: list[str], model_xr: dict[str, xr.Da
             nsecyr = 365*24*60*60  # seconds per year
             if 'npp' in target.lower():
                 # Get the NPP and multiply with area 12.01 and nsecyr to get total NPP
-                sim_df = np.nansum(model_ds[variable_names_dict["npp"]["sim"]][-1].values*area*factor_C*nsecyr)/1e15  # in Pg C yr-1
+                sim_df = np.nansum(model_ds[variable_names_dict["npp"]["sim"]].values*area*factor_C*nsecyr)/1e15  # in Pg C yr-1
                 error_npp = (abs(sim_df - target_npp)/target_npp if sim_df < target_npp_min or sim_df > target_npp_max else 0.0)
             if 'poc' in target.lower():
-                sim_df = np.nansum(model_ds[variable_names_dict["poc"]["sim"]][-1].values*area*factor_C*nsecyr)/1e15  # in Pg C yr-1
+                sim_df = np.nansum(model_ds[variable_names_dict["poc"]["sim"]].values*area*factor_C*nsecyr)/1e15  # in Pg C yr-1
                 error_poc = (abs(sim_df - target_poc)/target_poc if sim_df < target_poc_min or sim_df > target_poc_max else 0.0)
             if 'caco3' in target.lower():
-                sim_df = np.nansum(model_ds[variable_names_dict["caco3"]["sim"]][-1].values*area*factor_C*nsecyr)/1e15 # in Pg C yr-1
+                sim_df = np.nansum(model_ds[variable_names_dict["caco3"]["sim"]].values*area*factor_C*nsecyr)/1e15 # in Pg C yr-1
                 error_caco3 = (abs(sim_df - target_caco3)/target_caco3 if sim_df < target_caco3_min or sim_df > target_caco3_max else 0.0)
             if 'opal' in target.lower():
-                sim_df = np.nansum(model_ds[variable_names_dict["opal"]["sim"]][-1].values*area*nsecyr)/1e12 # in Tmol Si yr-1
+                sim_df = np.nansum(model_ds[variable_names_dict["opal"]["sim"]].values*area*nsecyr)/1e12 # in Tmol Si yr-1
                 error_opal = (abs(sim_df - target_opal)/target_opal if sim_df < target_opal_min or sim_df > target_opal_max else 0.0)
 
             bulk_errors = 1 + error_npp + error_poc + error_caco3 + error_opal
