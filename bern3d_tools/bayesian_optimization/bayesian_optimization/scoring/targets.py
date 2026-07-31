@@ -375,25 +375,25 @@ class NPZDTarget(ScoringTarget):
                     # Get the NPP and multiply with area 12.01 and nsecyr to get total NPP
                     target_npp_min = target_npp - 17
                     target_npp_max = target_npp + 17
-                    sim_df = np.nansum(ds_model[variable_names_dict["npp"]["sim"]][-1].values*area*factor_C*nsecyr)/1e15  # in Pg C yr-1
+                    sim_df = np.nansum(ds_model[variable_names_dict["npp"]["sim"]].values*area*factor_C*nsecyr)/1e15  # in Pg C yr-1
                     error_npp = (abs(sim_df - target_npp)/target_npp if sim_df < target_npp_min or sim_df > target_npp_max else 0.0)
 
                 if 'poc' in self.name:
                     target_poc_min = target_poc - 0.25
                     target_poc_max = target_poc + 0.25
-                    sim_df = np.nansum(ds_model[variable_names_dict["poc"]["sim"]][-1].values*area*factor_C*nsecyr)/1e15  # in Pg C yr-1
+                    sim_df = np.nansum(ds_model[variable_names_dict["poc"]["sim"]].values*area*factor_C*nsecyr)/1e15  # in Pg C yr-1
                     error_poc = (abs(sim_df - target_poc)/target_poc if sim_df < target_poc_min or sim_df > target_poc_max else 0.0)
 
                 if 'caco3' in self.name:
                     target_caco3_min = target_caco3 - 0.3
                     target_caco3_max = target_caco3 + 0.3
-                    sim_df = np.nansum(ds_model[variable_names_dict["caco3"]["sim"]][-1].values*area*factor_C*nsecyr)/1e15 # in Pg C yr-1
+                    sim_df = np.nansum(ds_model[variable_names_dict["caco3"]["sim"]].values*area*factor_C*nsecyr)/1e15 # in Pg C yr-1
                     error_caco3 = (abs(sim_df - target_caco3)/target_caco3 if sim_df < target_caco3_min or sim_df > target_caco3_max else 0.0)
 
                 if 'opal' in self.name:
                     target_opal_min = target_opal - 52
                     target_opal_max = target_opal + 52
-                    sim_df = np.nansum(ds_model[variable_names_dict["opal"]["sim"]][-1].values*area*nsecyr)/1e12 # in Tmol Si yr-1
+                    sim_df = np.nansum(ds_model[variable_names_dict["opal"]["sim"]].values*area*nsecyr)/1e12 # in Tmol Si yr-1
                     error_opal = (abs(sim_df - target_opal)/target_opal if sim_df < target_opal_min or sim_df > target_opal_max else 0.0)
 
                 bulk_errors = 1 + error_npp + error_poc + error_caco3 + error_opal
